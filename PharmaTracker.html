@@ -7,6 +7,8 @@
   
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2e7d32">
 
   <style>
     :root {
@@ -154,6 +156,12 @@
       margin: 20px auto;
     }
 
+    /* Mobile-friendly card list for transactions */
+    #expense-cards{display:none}
+    .expense-card{background:var(--card-bg);border:1px solid var(--border-color);padding:12px;border-radius:8px;margin-bottom:12px}
+    .expense-card .row{display:flex;justify-content:space-between;align-items:center}
+    .expense-card .meta{font-size:0.9em;color:#666}
+
     hr {
       border: 0;
       height: 1px;
@@ -173,6 +181,18 @@
       padding: 12px 0;
       font-size: 0.9em;
       letter-spacing: 0.5px;
+    }
+
+    /* Responsive rules */
+    @media (max-width: 768px){
+      .container{padding:16px}
+      form{flex-direction:column}
+      input, select, button{width:100%}
+      .chart-container{max-width:320px}
+      table{display:none}
+      #expense-cards{display:block}
+      footer{font-size:0.85em}
+      .header-row h1{font-size:1.6rem}
     }
   </style>
 </head>
@@ -234,7 +254,10 @@
         </tr>
       </thead>
       <tbody id="expense-list"></tbody>
-    </table>
+        <tbody id="expense-list"></tbody>
+      </table>
+
+      <div id="expense-cards"></div>
   </div>
 
   <footer>
@@ -401,6 +424,8 @@
     function render() {
       const selectedMonth = monthFilter.value;
       expenseList.innerHTML = '';
+      const expenseCards = document.getElementById('expense-cards');
+      expenseCards.innerHTML = '';
       let total = 0;
 
       const categoryTotals = {
@@ -431,6 +456,19 @@
           </td>
         `;
         expenseList.appendChild(row);
+
+        // Also create a mobile-friendly card version
+        const card = document.createElement('div');
+        card.className = 'expense-card';
+        card.innerHTML = `
+          <div class="row"><strong>${item.category}</strong><span>${Number(item.amount).toLocaleString()} RWF</span></div>
+          <div class="row meta"><span>${item.date} — ${item.user}</span><span>
+            <button class="btn-action btn-edit" onclick="editExpense(${item.id})">Edit</button>
+            <button class="btn-action btn-delete" onclick="deleteExpense(${item.id})">Delete</button>
+          </span></div>
+          <div style="margin-top:8px">${item.description}</div>
+        `;
+        expenseCards.appendChild(card);
       });
 
       totalSpentDisplay.textContent = `${total.toLocaleString()} RWF`;
@@ -439,6 +477,11 @@
 
     // Initial Load
     loadExpenses();
+
+    // Register service worker for PWA (optional)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then(() => console.log('Service Worker registered')).catch(err => console.warn('SW registration failed', err));
+    }
   </script>
 </body>
 </html>

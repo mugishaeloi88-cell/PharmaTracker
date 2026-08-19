@@ -1,0 +1,11 @@
+{
+  "name": "PharmaTracker",
+  "short_name": "Pharma",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#2b2b2b",
+  "theme_color": "#2e7d32",
+  "icons": [
+    { "src": "download.jpeg", "sizes": "1600x900", "type": "image/jpeg" }
+  ]
+}
