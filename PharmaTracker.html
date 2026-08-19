@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pharmacy & Home Expense Tracker</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --bg-overlay: rgba(255, 255, 255, 0.88);
+      --card-bg: #ffffff;
+      --text-color: #333333;
+      --border-color: #cccccc;
+      --table-header-bg: #f2f2f2;
+      --input-bg: #ffffff;
+      --button-bg: #2e7d32;
+      --button-hover: #1b5e20;
+      --danger-bg: #d32f2f;
+      --danger-hover: #9a0007;
+    }
+
+    [data-theme="dark"] {
+      --bg-overlay: rgba(18, 18, 18, 0.90);
+      --card-bg: #1e1e1e;
+      --text-color: #e0e0e0;
+      --border-color: #444444;
+      --table-header-bg: #2d2d2d;
+      --input-bg: #2a2a2a;
+      --button-bg: #388e3c;
+      --button-hover: #2e7d32;
+      --danger-bg: #e53935;
+      --danger-hover: #b71c1c;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      padding-bottom: 80px;
+      background-image: url('download.jpeg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      color: var(--text-color);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--bg-overlay);
+      backdrop-filter: blur(5px);
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .theme-toggle-btn {
+      background-color: var(--button-bg);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    form {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    input, select, button {
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background-color: var(--input-bg);
+      color: var(--text-color);
+    }
+
+    form button {
+      background-color: var(--button-bg);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    form button:hover, .theme-toggle-btn:hover {
+      background-color: var(--button-hover);
+    }
+
+    .btn-action {
+      padding: 4px 8px;
+      font-size: 0.85em;
+      margin-right: 4px;
+      cursor: pointer;
+    }
+
+    .btn-edit {
+      background-color: #0288d1;
+      color: white;
+      border: none;
+    }
+
+    .btn-delete {
+      background-color: var(--danger-bg);
+      color: white;
+      border: none;
+    }
+
+    .btn-delete:hover {
+      background-color: var(--danger-hover);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--table-header-bg);
+    }
+
+    .summary-cards {
+      margin: 15px 0;
+      font-weight: bold;
+      font-size: 1.2em;
+    }
+
+    .chart-container {
+      position: relative;
+      max-width: 450px;
+      margin: 20px auto;
+    }
+
+    hr {
+      border: 0;
+      height: 1px;
+      background: var(--border-color);
+      margin: 20px 0;
+    }
+
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      color: #ffffff;
+      text-align: center;
+      padding: 12px 0;
+      font-size: 0.9em;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-row">
+      <h1>Expense Tracker</h1>
+      <button class="theme-toggle-btn" id="theme-toggle">🌙 Dark Mode</button>
+    </div>
+
+    <form id="expense-form">
+      <select id="user" required>
+        <option value="">Added By *</option>
+        <option value="Manasseh">Manasseh</option>
+        <option value="Claire">Claire</option>
+      </select>
+      <input type="number" id="amount" placeholder="Amount (RWF) *" step="1" required>
+      <select id="category" required>
+        <option value="">Select Category *</option>
+        <option value="Home Use">Home Use</option>
+        <option value="Security & Hygiene">Security & Hygiene</option>
+        <option value="Unplanned / Improvises">Unplanned / Improvises</option>
+        <option value="Pharmacy Operations">Pharmacy Operations</option>
+      </select>
+      <input type="date" id="date" required>
+      <input type="text" id="description" placeholder="Description *" required>
+      <button type="submit" id="form-submit-btn">Add Expense</button>
+      <button type="button" id="cancel-edit-btn" style="display:none; background-color: #757575;">Cancel</button>
+    </form>
+
+    <hr>
+
+    <div class="filter-section">
+      <label for="month-filter">Select Month: </label>
+      <input type="month" id="month-filter">
+    </div>
+
+    <div class="summary-cards">
+      <div class="card">Total Spent: <span id="total-spent">0 RWF</span></div>
+    </div>
+
+    <h2>Monthly Analysis</h2>
+    <div class="chart-container">
+      <canvas id="categoryChart"></canvas>
+    </div>
+
+    <hr>
+
+    <h2>Transaction History</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Added By</th>
+          <th>Category</th>
+          <th>Description</th>
+          <th>Amount</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="expense-list"></tbody>
+    </table>
+  </div>
+
+  <footer>
+    Created proudly for La Providence Pharmacy | 2026
+  </footer>
+
+  <script>
+    // FIX 1: Clean URL without path extensions
+    const SUPABASE_URL = 'https://dcqznryaqrksgvizavqw.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_ExFDF0ZuRHST5CXMGW887g_T4X9QiRh';
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let expenses = [];
+    let editId = null;
+    let categoryChart = null;
+
+    const form = document.getElementById('expense-form');
+    const expenseList = document.getElementById('expense-list');
+    const totalSpentDisplay = document.getElementById('total-spent');
+    const monthFilter = document.getElementById('month-filter');
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const submitBtn = document.getElementById('form-submit-btn');
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
+
+    document.getElementById('date').valueAsDate = new Date();
+    monthFilter.value = new Date().toISOString().slice(0, 7);
+
+    // Dark Mode Toggle
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    if (currentTheme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      themeToggleBtn.textContent = '☀️ Light Mode';
+    }
+
+    themeToggleBtn.addEventListener('click', () => {
+      let theme = document.documentElement.getAttribute('data-theme');
+      if (theme === 'dark') {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'light');
+        themeToggleBtn.textContent = '🌙 Dark Mode';
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+        themeToggleBtn.textContent = '☀️ Light Mode';
+      }
+      render();
+    });
+
+    // Fetch records directly from Supabase
+    async function loadExpenses() {
+      const { data, error } = await db
+        .from('expenses')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Fetch error:', error);
+        alert('Could not fetch data from database: ' + error.message);
+        return;
+      }
+      expenses = data || [];
+      render();
+    }
+
+    // Form Handle Submission to Supabase
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const user = document.getElementById('user').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const category = document.getElementById('category').value;
+      const date = document.getElementById('date').value;
+      const description = document.getElementById('description').value;
+
+      if (!user || isNaN(amount) || !category || !date || !description.trim()) {
+        alert("Please fill out all fields.");
+        return;
+      }
+
+      if (editId !== null) {
+        const { error } = await db
+          .from('expenses')
+          .update({ user, amount, category, date, description })
+          .eq('id', editId);
+
+        if (error) alert("Error updating: " + error.message);
+        editId = null;
+        submitBtn.textContent = 'Add Expense';
+        cancelEditBtn.style.display = 'none';
+      } else {
+        const { error } = await db
+          .from('expenses')
+          .insert([{ user, amount, category, date, description }]);
+
+        if (error) alert("Error adding expense: " + error.message);
+      }
+
+      form.reset();
+      document.getElementById('date').valueAsDate = new Date();
+      await loadExpenses();
+    });
+
+    cancelEditBtn.addEventListener('click', () => {
+      editId = null;
+      form.reset();
+      document.getElementById('date').valueAsDate = new Date();
+      submitBtn.textContent = 'Add Expense';
+      cancelEditBtn.style.display = 'none';
+    });
+
+    monthFilter.addEventListener('change', render);
+
+    function editExpense(id) {
+      const item = expenses.find(x => x.id === id);
+      if (item) {
+        document.getElementById('user').value = item.user;
+        document.getElementById('amount').value = item.amount;
+        document.getElementById('category').value = item.category;
+        document.getElementById('date').value = item.date;
+        document.getElementById('description').value = item.description;
+
+        editId = id;
+        submitBtn.textContent = 'Update Expense';
+        cancelEditBtn.style.display = 'inline-block';
+      }
+    }
+
+    async function deleteExpense(id) {
+      if (confirm("Delete this transaction?")) {
+        const { error } = await db.from('expenses').delete().eq('id', id);
+        if (error) alert("Error deleting: " + error.message);
+        await loadExpenses();
+      }
+    }
+
+    function updateChart(categoriesData) {
+      const ctx = document.getElementById('categoryChart').getContext('2d');
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+      if (categoryChart) categoryChart.destroy();
+
+      categoryChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(categoriesData),
+          datasets: [{
+            data: Object.values(categoriesData),
+            backgroundColor: ['#4caf50', '#2196f3', '#ff9800', '#9c27b0'],
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: isDark ? '#e0e0e0' : '#333333', font: { size: 12 } }
+            }
+          }
+        }
+      });
+    }
+
+    function render() {
+      const selectedMonth = monthFilter.value;
+      expenseList.innerHTML = '';
+      let total = 0;
+
+      const categoryTotals = {
+        'Home Use': 0,
+        'Security & Hygiene': 0,
+        'Unplanned / Improvises': 0,
+        'Pharmacy Operations': 0
+      };
+
+      const filtered = expenses.filter(item => item.date && item.date.startsWith(selectedMonth));
+
+      filtered.forEach(item => {
+        total += Number(item.amount);
+        if (categoryTotals[item.category] !== undefined) {
+          categoryTotals[item.category] += Number(item.amount);
+        }
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.date}</td>
+          <td>${item.user}</td>
+          <td>${item.category}</td>
+          <td>${item.description}</td>
+          <td>${Number(item.amount).toLocaleString()} RWF</td>
+          <td>
+            <button class="btn-action btn-edit" onclick="editExpense(${item.id})">Edit</button>
+            <button class="btn-action btn-delete" onclick="deleteExpense(${item.id})">Delete</button>
+          </td>
+        `;
+        expenseList.appendChild(row);
+      });
+
+      totalSpentDisplay.textContent = `${total.toLocaleString()} RWF`;
+      updateChart(categoryTotals);
+    }
+
+    // Initial Load
+    loadExpenses();
+  </script>
+</body>
+</html>
