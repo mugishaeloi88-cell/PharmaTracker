@@ -67,7 +67,15 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
       margin-bottom: 20px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
     }
 
     .theme-toggle-btn {
@@ -185,6 +193,122 @@
       letter-spacing: 0.5px;
     }
 
+    .print-report-header {
+      display: none;
+    }
+
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 18mm;
+      }
+
+      body {
+        background-image: none !important;
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+      }
+
+      .container {
+        max-width: none !important;
+        width: 100% !important;
+        background: #ffffff !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+      }
+
+      .no-print,
+      form,
+      .filter-section,
+      .theme-toggle-btn,
+      .btn-action,
+      .btn-edit,
+      .btn-delete,
+      footer,
+      #cancel-edit-btn,
+      .expense-card {
+        display: none !important;
+      }
+
+      .summary-cards {
+        display: block !important;
+        margin: 16px 0 18px 0;
+        font-size: 18px;
+      }
+
+      table {
+        display: table !important;
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+      }
+
+      #expense-list {
+        display: table-row-group !important;
+      }
+
+      .header-row h1 {
+        display: none !important;
+      }
+
+      .print-report-header {
+        display: block;
+        border-bottom: 2px solid #000000;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        page-break-inside: avoid;
+      }
+
+      .print-report-header h2 {
+        margin: 0 0 6px 0;
+        font-size: 24px;
+        color: #000000;
+      }
+
+      .print-report-header p {
+        margin: 2px 0;
+        font-size: 12px;
+        color: #000000;
+      }
+
+      h2,
+      th,
+      td,
+      .summary-cards,
+      .chart-container,
+      #total-spent {
+        color: #000000 !important;
+      }
+
+      th,
+      td {
+        border: 1px solid #000000 !important;
+        background: #ffffff !important;
+        padding: 8px !important;
+        color: #000000 !important;
+      }
+
+      h2 {
+        break-after: avoid;
+      }
+
+      .chart-container {
+        position: relative;
+        width: 100%;
+        max-width: 600px;
+        margin: 20px auto;
+        page-break-inside: avoid;
+      }
+
+      canvas {
+        max-width: 100% !important;
+        height: auto !important;
+      }
+    }
+
     /* Responsive rules */
     @media (max-width: 768px){
       .container{padding:16px}
@@ -202,10 +326,19 @@
   <div class="container">
     <div class="header-row">
       <h1>Expense Tracker</h1>
-      <button class="theme-toggle-btn" id="theme-toggle">🌙 Dark Mode</button>
+      <div class="header-actions no-print">
+        <button class="theme-toggle-btn" id="theme-toggle">🌙 Dark Mode</button>
+        <button class="theme-toggle-btn" id="print-report-btn" type="button">🖨️ Print Report</button>
+      </div>
     </div>
 
-    <form id="expense-form">
+    <div class="print-report-header" aria-live="polite">
+      <h2>La Providence Pharmacy</h2>
+      <p id="print-month-label">Monthly Expense Report</p>
+      <p id="print-date-label">Printed on: --</p>
+    </div>
+
+    <form id="expense-form" class="no-print">
       <select id="user" required>
         <option value="">Added By *</option>
         <option value="Manasseh">Manasseh</option>
@@ -227,7 +360,7 @@
 
     <hr>
 
-    <div class="filter-section">
+    <div class="filter-section no-print">
       <label for="month-filter">Select Month: </label>
       <input type="month" id="month-filter">
     </div>
@@ -256,10 +389,9 @@
         </tr>
       </thead>
       <tbody id="expense-list"></tbody>
-        <tbody id="expense-list"></tbody>
-      </table>
+    </table>
 
-      <div id="expense-cards"></div>
+    <div id="expense-cards"></div>
   </div>
 
   <footer>
@@ -281,11 +413,25 @@
     const totalSpentDisplay = document.getElementById('total-spent');
     const monthFilter = document.getElementById('month-filter');
     const themeToggleBtn = document.getElementById('theme-toggle');
+    const printReportBtn = document.getElementById('print-report-btn');
     const submitBtn = document.getElementById('form-submit-btn');
     const cancelEditBtn = document.getElementById('cancel-edit-btn');
+    const printMonthLabel = document.getElementById('print-month-label');
+    const printDateLabel = document.getElementById('print-date-label');
 
     document.getElementById('date').valueAsDate = new Date();
     monthFilter.value = new Date().toISOString().slice(0, 7);
+
+    function updatePrintHeader() {
+      const selectedMonth = monthFilter.value || new Date().toISOString().slice(0, 7);
+      const monthDate = new Date(`${selectedMonth}-01T00:00:00`);
+      const formattedMonth = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const today = new Date();
+      const printedDate = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      printMonthLabel.textContent = `Report Month: ${formattedMonth}`;
+      printDateLabel.textContent = `Printed on: ${printedDate}`;
+    }
 
     // Dark Mode Toggle
     const currentTheme = localStorage.getItem('theme') || 'light';
@@ -370,7 +516,15 @@
       cancelEditBtn.style.display = 'none';
     });
 
-    monthFilter.addEventListener('change', render);
+    monthFilter.addEventListener('change', () => {
+      updatePrintHeader();
+      render();
+    });
+
+    printReportBtn.addEventListener('click', () => {
+      updatePrintHeader();
+      window.print();
+    });
 
     function editExpense(id) {
       const item = expenses.find(x => x.id === id);
@@ -424,6 +578,7 @@
     }
 
     function render() {
+      updatePrintHeader();
       const selectedMonth = monthFilter.value;
       expenseList.innerHTML = '';
       const expenseCards = document.getElementById('expense-cards');
