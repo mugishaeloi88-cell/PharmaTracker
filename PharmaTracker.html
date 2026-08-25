@@ -3,18 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pharmacy & Home Expense Tracker</title>
+  <title> Pharma Tracker</title>
   
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="logo.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="logo.svg">
   <meta name="theme-color" content="#2e7d32">
 
   <style>
     :root {
-      --bg-overlay: rgba(255, 255, 255, 0.36);
+      --bg-overlay: rgba(255, 255, 255, 0.75);
       --card-bg: #ffffff;
       --text-color: #333333;
       --border-color: #cccccc;
@@ -23,41 +21,59 @@
       --button-bg: #2e7d32;
       --button-hover: #1b5e20;
       --danger-bg: #d32f2f;
-      --danger-hover: #9a0007;
     }
 
     [data-theme="dark"] {
-      --bg-overlay: rgba(18, 18, 18, 0.60);
+      --bg-overlay: rgba(18, 18, 18, 0.85);
       --card-bg: #1e1e1e;
       --text-color: #e0e0e0;
       --border-color: #444444;
       --table-header-bg: #2d2d2d;
       --input-bg: #2a2a2a;
       --button-bg: #388e3c;
-      --button-hover: #2e7d32;
       --danger-bg: #e53935;
-      --danger-hover: #b71c1c;
     }
 
     body {
       font-family: Arial, sans-serif;
       margin: 0;
-      padding: 20px;
-      padding-bottom: 80px;
-      background-image: url('download.jpeg'), url('https://via.placeholder.com/1600x900/2b2b2b/4caf50?text=PharmaTracker');
+      padding: 20px 20px 80px 20px;
+      background-image: url('download.jpeg');
       background-size: cover;
       background-position: center;
       background-attachment: fixed;
-      background-repeat: no-repeat;
       color: var(--text-color);
-      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .view-page { display: none; }
+    .view-page.active { display: block; }
+
+    .landing-box {
+      max-width: 450px;
+      margin: 80px auto;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .brand-logo {
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--button-bg);
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
 
     .container {
-      max-width: 900px;
+      max-width: 1100px;
       margin: 0 auto;
       background: var(--bg-overlay);
-      backdrop-filter: blur(5px);
+      backdrop-filter: blur(8px);
       padding: 25px;
       border-radius: 12px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.2);
@@ -67,18 +83,14 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      margin-bottom: 15px;
       flex-wrap: wrap;
+      gap: 10px;
     }
 
-    .theme-toggle-btn {
+    .header-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .action-btn, .theme-toggle-btn {
       background-color: var(--button-bg);
       color: white;
       border: none;
@@ -87,6 +99,35 @@
       cursor: pointer;
       font-weight: bold;
     }
+    .export-btn { background-color: #0288d1; }
+    .print-btn { background-color: #7b1fa2; }
+    .logout-btn { background-color: #616161; }
+
+    .nav-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .nav-tab {
+      padding: 10px 18px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      font-weight: bold;
+      color: var(--text-color);
+    }
+
+    .nav-tab.active {
+      background: var(--button-bg);
+      color: white;
+      border-color: var(--button-bg);
+    }
+
+    .tab-page { display: none; }
+    .tab-page.active { display: block; }
 
     form {
       display: flex;
@@ -103,7 +144,9 @@
       color: var(--text-color);
     }
 
-    form button {
+    .full-width { width: 100%; }
+
+    form button[type="submit"] {
       background-color: var(--button-bg);
       color: white;
       border: none;
@@ -111,287 +154,269 @@
       font-weight: bold;
     }
 
-    form button:hover, .theme-toggle-btn:hover {
-      background-color: var(--button-hover);
-    }
-
     .btn-action {
       padding: 4px 8px;
       font-size: 0.85em;
-      margin-right: 4px;
       cursor: pointer;
-    }
-
-    .btn-edit {
-      background-color: #0288d1;
-      color: white;
       border: none;
+      border-radius: 4px;
     }
-
-    .btn-delete {
-      background-color: var(--danger-bg);
-      color: white;
-      border: none;
-    }
-
-    .btn-delete:hover {
-      background-color: var(--danger-hover);
-    }
+    .btn-edit { background-color: #0288d1; color: white; }
+    .btn-delete { background-color: var(--danger-bg); color: white; }
 
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 15px;
+      font-size: 0.9em;
     }
 
     th, td {
       border: 1px solid var(--border-color);
-      padding: 10px;
+      padding: 8px;
       text-align: left;
     }
-
-    th {
-      background-color: var(--table-header-bg);
-    }
+    th { background-color: var(--table-header-bg); }
 
     .summary-cards {
+      display: flex;
+      gap: 15px;
       margin: 15px 0;
+      flex-wrap: wrap;
+    }
+
+    .summary-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      padding: 12px 18px;
+      border-radius: 8px;
       font-weight: bold;
-      font-size: 1.2em;
+      flex: 1;
+      min-width: 160px;
     }
 
-    .chart-container {
-      position: relative;
-      max-width: 450px;
-      margin: 20px auto;
+    .status-badge {
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      font-weight: bold;
     }
+    .status-ok { background: #e8f5e9; color: #2e7d32; }
+    .status-emergency { background: #ffebee; color: #c62828; }
 
-    /* Mobile-friendly card list for transactions */
-    #expense-cards{display:none}
-    .expense-card{background:var(--card-bg);border:1px solid var(--border-color);padding:12px;border-radius:8px;margin-bottom:12px}
-    .expense-card .row{display:flex;justify-content:space-between;align-items:center}
-    .expense-card .meta{font-size:0.9em;color:#666}
-
-    hr {
-      border: 0;
-      height: 1px;
-      background: var(--border-color);
-      margin: 20px 0;
-    }
+    .mobile-cards { display: none; }
+    .print-only-header { display: none; }
 
     footer {
       position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background: rgba(0, 0, 0, 0.6);
+      bottom: 0; left: 0; width: 100%;
+      background: rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(4px);
       color: #ffffff;
       text-align: center;
       padding: 12px 0;
       font-size: 0.9em;
-      letter-spacing: 0.5px;
-    }
-
-    .print-report-header {
-      display: none;
     }
 
     @media print {
-      @page {
-        size: A4 portrait;
-        margin: 18mm;
-      }
-
-      body {
-        background-image: none !important;
-        background-color: #ffffff !important;
-        color: #000000 !important;
-        padding: 0 !important;
-      }
-
-      .container {
-        max-width: none !important;
-        width: 100% !important;
-        background: #ffffff !important;
-        box-shadow: none !important;
-        backdrop-filter: none !important;
-        padding: 0 !important;
-        border-radius: 0 !important;
-      }
-
-      .no-print,
-      form,
-      .filter-section,
-      .theme-toggle-btn,
-      .btn-action,
-      .btn-edit,
-      .btn-delete,
-      footer,
-      #cancel-edit-btn,
-      .expense-card {
-        display: none !important;
-      }
-
-      .summary-cards {
-        display: block !important;
-        margin: 16px 0 18px 0;
-        font-size: 18px;
-      }
-
-      table {
-        display: table !important;
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 11px;
-      }
-
-      #expense-list {
-        display: table-row-group !important;
-      }
-
-      .header-row h1 {
-        display: none !important;
-      }
-
-      .print-report-header {
-        display: block;
-        border-bottom: 2px solid #000000;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        page-break-inside: avoid;
-      }
-
-      .print-report-header h2 {
-        margin: 0 0 6px 0;
-        font-size: 24px;
-        color: #000000;
-      }
-
-      .print-report-header p {
-        margin: 2px 0;
-        font-size: 12px;
-        color: #000000;
-      }
-
-      h2,
-      th,
-      td,
-      .summary-cards,
-      .chart-container,
-      #total-spent {
-        color: #000000 !important;
-      }
-
-      th,
-      td {
-        border: 1px solid #000000 !important;
-        background: #ffffff !important;
-        padding: 8px !important;
-        color: #000000 !important;
-      }
-
-      h2 {
-        break-after: avoid;
-      }
-
-      .chart-container {
-        position: relative;
-        width: 100%;
-        max-width: 600px;
-        margin: 20px auto;
-        page-break-inside: avoid;
-      }
-
-      canvas {
-        max-width: 100% !important;
-        height: auto !important;
-      }
+      body { background: none !important; color: #000 !important; padding: 0 !important; }
+      .container { max-width: 100% !important; box-shadow: none !important; padding: 0 !important; background: transparent !important; }
+      .header-row, .nav-tabs, form, .filter-section, footer, hr, .action-btn, .theme-toggle-btn, .no-print, .actions-column, .hide-print { display: none !important; }
+      .print-only-header { display: block !important; margin-bottom: 20px; border-bottom: 2px solid #2e7d32; }
+      table { display: table !important; width: 100% !important; font-size: 10pt; }
+      th, td { border: 1px solid #000 !important; color: #000 !important; padding: 4px !important; }
+      .mobile-cards { display: none !important; }
     }
 
-    /* Responsive rules */
-    @media (max-width: 768px){
-      .container{padding:16px}
-      form{flex-direction:column}
-      input, select, button{width:100%}
-      .chart-container{max-width:320px}
-      table{display:none}
-      #expense-cards{display:block}
-      footer{font-size:0.85em}
-      .header-row h1{font-size:1.6rem}
+    @media (max-width: 768px) {
+      .container { padding: 15px; }
+      form { flex-direction: column; }
+      input, select, button { width: 100%; }
+      table { display: none; }
+      .mobile-cards { display: block; }
+      .nav-tabs { flex-direction: column; }
+      .expense-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header-row">
-      <h1>Expense Tracker</h1>
-      <div class="header-actions no-print">
-        <button class="theme-toggle-btn" id="theme-toggle">🌙 Dark Mode</button>
-        <button class="theme-toggle-btn" id="print-report-btn" type="button">🖨️ Print Report</button>
+
+  <!-- VIEW 1: LANDING PAGE -->
+  <div id="view-landing" class="view-page active">
+    <div class="landing-box">
+      <div class="brand-logo"> Pharma Tracker</div>
+      <p style="margin-bottom: 20px; color: #666;">Welcome to La Providence Pharmacy financial & sales tracker application.</p>
+      <button class="action-btn full-width" onclick="switchMainView('view-login')">Go to Login</button>
+    </div>
+  </div>
+
+  <!-- VIEW 2: LOGIN PAGE -->
+  <div id="view-login" class="view-page">
+    <div class="landing-box">
+      <div class="brand-logo">Admin Login</div>
+      <form id="login-form" onsubmit="handleLogin(event)" style="flex-direction: column;">
+        <input type="text" id="login-user" placeholder="Username " required>
+        <input type="password" id="login-pass" placeholder="Password " required>
+        <div id="login-error" style="color: var(--danger-bg); display: none; font-size: 0.85em;">Invalid Username or Password</div>
+        <button type="submit" class="full-width">Login</button>
+        <button type="button" class="logout-btn full-width" onclick="switchMainView('view-landing')">Back</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- VIEW 3: MAIN APP DASHBOARD -->
+  <div id="view-app" class="view-page">
+    <div class="container">
+      <div class="print-only-header">
+        <h1>La Providence Pharmacy</h1>
+        <p><strong id="print-page-title">Report</strong> | Date: <span id="print-current-date"></span></p>
+      </div>
+
+      <div class="header-row">
+        <h1>Pharmacy Management</h1>
+        <div class="header-btns">
+          <button class="action-btn export-btn" id="export-btn">📥 CSV Export</button>
+          <button class="action-btn print-btn" id="print-btn">🖨️ Print Report</button>
+          <button class="theme-toggle-btn" id="theme-toggle">🌙 Dark Mode</button>
+          <button class="action-btn logout-btn" onclick="handleLogout()">Logout</button>
+        </div>
+      </div>
+
+      <div class="nav-tabs">
+        <button class="nav-tab active" id="tab-btn-expenses" onclick="switchTab('expenses')"> Pharmacy Expenses</button>
+        <button class="nav-tab" id="tab-btn-income" onclick="switchTab('income')"> Daily Income & Banking</button>
+      </div>
+
+      <!-- PAGE 1: PHARMACY EXPENSES -->
+      <div id="page-expenses" class="tab-page active">
+        <form id="expense-form">
+          <select id="exp-user" required>
+            <option value="">Added By *</option>
+            <option value="Manasseh">Manasseh</option>
+            <option value="Claire">Claire</option>
+          </select>
+          <input type="number" id="exp-amount" placeholder="Amount (RWF) *" required>
+          <select id="exp-category" required>
+            <option value="">Select Category *</option>
+            <option value="Home Use">Home Use</option>
+            <option value="Security & Hygiene">Security & Hygiene</option>
+            <option value="Unplanned / Improvises">Unplanned / Improvises</option>
+            <option value="Pharmacy Operations">Pharmacy Operations</option>
+          </select>
+          <input type="date" id="exp-date" required>
+          <input type="text" id="exp-description" placeholder="Description *" required>
+          <button type="submit" id="exp-submit-btn">Add Expense</button>
+          <button type="button" id="exp-cancel-btn" style="display:none; background:#757575;" onclick="resetExpenseForm()">Cancel</button>
+        </form>
+
+        <hr>
+
+        <div class="filter-section">
+          <label><strong>Filter Month: </strong></label>
+          <input type="month" id="exp-month-filter">
+          <button type="button" class="action-btn" onclick="clearMonthFilter('exp')">Show All Months</button>
+        </div>
+
+        <div class="summary-cards">
+          <div class="summary-card">Total Spent: <span id="exp-total-spent">0 RWF</span></div>
+        </div>
+
+        <hr>
+
+        <h2>Expense History</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Added By</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Amount</th>
+              <th class="actions-column">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="expense-list"></tbody>
+        </table>
+        <div id="expense-mobile-cards" class="mobile-cards"></div>
+      </div>
+
+      <!-- PAGE 2: DAILY INCOME & BANKING -->
+      <div id="page-income" class="tab-page">
+        <form id="income-form">
+          <select id="inc-user" required>
+            <option value="">Added By *</option>
+            <option value="Manasseh">Manasseh</option>
+            <option value="Claire">Claire</option>
+          </select>
+          <input type="date" id="inc-date" required>
+          
+          <input type="number" id="inc-cash-amount" placeholder="Cash in Hand (RWF)" min="0">
+          <input type="number" id="inc-momo-amount" placeholder="MoMoPay Income (RWF)" min="0">
+
+          <select id="inc-bank-name" required>
+            <option value="">Select Target Bank *</option>
+            <option value="Equity Bank">Equity Bank</option>
+            <option value="Bank of Africa">Bank of Africa</option>
+          </select>
+          <input type="number" id="inc-bank-amount" placeholder="Amount Put in Bank (RWF) *" required>
+          <input type="number" id="inc-case-cash" placeholder="Money Left in Case Drawer (RWF) *" required>
+          
+          <select id="inc-bank-status" required>
+            <option value="true">Transferred to Bank Successfully</option>
+            <option value="false">Not Transferred (Emergency / Issue)</option>
+          </select>
+
+          <input type="text" id="inc-notes" placeholder="Notes / Ref / Emergency Reason">
+          
+          <button type="submit" id="inc-submit-btn">Save Daily Entry</button>
+          <button type="button" id="inc-cancel-btn" style="display:none; background:#757575;" onclick="resetIncomeForm()">Cancel</button>
+        </form>
+
+        <hr>
+
+        <div class="filter-section">
+          <label><strong>Filter Month: </strong></label>
+          <input type="month" id="inc-month-filter">
+          <button type="button" class="action-btn" onclick="clearMonthFilter('inc')">Show All Months</button>
+        </div>
+
+        <div class="summary-cards">
+          <div class="summary-card">Total Income: <span id="inc-total-income">0 RWF</span></div>
+          <div class="summary-card">Cash Total: <span id="inc-total-cash">0 RWF</span></div>
+          <div class="summary-card">MoMo Total: <span id="inc-total-momo">0 RWF</span></div>
+          <div class="summary-card">Total Banked: <span id="inc-total-banked">0 RWF</span></div>
+          <div class="summary-card hide-print">Cash in Drawer: <span id="inc-total-case">0 RWF</span></div>
+        </div>
+
+        <hr>
+
+        <h2>Daily Income & Register Records</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Added By</th>
+              <th>Cash Income</th>
+              <th>MoMo Income</th>
+              <th>Total Gross</th>
+              <th>Same-Day Expenses</th>
+              <th>Bank / Banked Amt</th>
+              <th class="hide-print">Money Left in Case</th>
+              <th>Status</th>
+              <th class="actions-column">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="income-list"></tbody>
+        </table>
+        <div id="income-mobile-cards" class="mobile-cards"></div>
       </div>
     </div>
-
-    <div class="print-report-header" aria-live="polite">
-      <h2>La Providence Pharmacy</h2>
-      <p id="print-month-label">Monthly Expense Report</p>
-      <p id="print-date-label">Printed on: --</p>
-    </div>
-
-    <form id="expense-form" class="no-print">
-      <select id="user" required>
-        <option value="">Added By *</option>
-        <option value="Manasseh">Manasseh</option>
-        <option value="Claire">Claire</option>
-      </select>
-      <input type="number" id="amount" placeholder="Amount (RWF) *" step="1" required>
-      <select id="category" required>
-        <option value="">Select Category *</option>
-        <option value="Home Use">Home Use</option>
-        <option value="Security & Hygiene">Security & Hygiene</option>
-        <option value="Unplanned / Improvises">Unplanned / Improvises</option>
-        <option value="Pharmacy Operations">Pharmacy Operations</option>
-      </select>
-      <input type="date" id="date" required>
-      <input type="text" id="description" placeholder="Description *" required>
-      <button type="submit" id="form-submit-btn">Add Expense</button>
-      <button type="button" id="cancel-edit-btn" style="display:none; background-color: #757575;">Cancel</button>
-    </form>
-
-    <hr>
-
-    <div class="filter-section no-print">
-      <label for="month-filter">Select Month: </label>
-      <input type="month" id="month-filter">
-    </div>
-
-    <div class="summary-cards">
-      <div class="card">Total Spent: <span id="total-spent">0 RWF</span></div>
-    </div>
-
-    <h2>Monthly Analysis</h2>
-    <div class="chart-container">
-      <canvas id="categoryChart"></canvas>
-    </div>
-
-    <hr>
-
-    <h2>Transaction History</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Added By</th>
-          <th>Category</th>
-          <th>Description</th>
-          <th>Amount</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="expense-list"></tbody>
-    </table>
-
-    <div id="expense-cards"></div>
   </div>
 
   <footer>
@@ -399,245 +424,466 @@
   </footer>
 
   <script>
-    // FIX 1: Clean URL without path extensions
+    // 1. SUPABASE INITIALIZATION
     const SUPABASE_URL = 'https://dcqznryaqrksgvizavqw.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_ExFDF0ZuRHST5CXMGW887g_T4X9QiRh';
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let expenses = [];
-    let editId = null;
-    let categoryChart = null;
+    let incomeRecords = [];
+    let activeTab = 'expenses';
+    let editExpId = null;
+    let editIncId = null;
 
-    const form = document.getElementById('expense-form');
-    const expenseList = document.getElementById('expense-list');
-    const totalSpentDisplay = document.getElementById('total-spent');
-    const monthFilter = document.getElementById('month-filter');
+    const monthFilterExp = document.getElementById('exp-month-filter');
+    const monthFilterInc = document.getElementById('inc-month-filter');
     const themeToggleBtn = document.getElementById('theme-toggle');
-    const printReportBtn = document.getElementById('print-report-btn');
-    const submitBtn = document.getElementById('form-submit-btn');
-    const cancelEditBtn = document.getElementById('cancel-edit-btn');
-    const printMonthLabel = document.getElementById('print-month-label');
-    const printDateLabel = document.getElementById('print-date-label');
 
-    document.getElementById('date').valueAsDate = new Date();
-    monthFilter.value = new Date().toISOString().slice(0, 7);
+    // Auto Dates
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const monthStr = new Date().toISOString().slice(0, 7);
+    document.getElementById('exp-date').value = todayStr;
+    document.getElementById('inc-date').value = todayStr;
+    monthFilterExp.value = monthStr;
+    monthFilterInc.value = monthStr;
 
-    function updatePrintHeader() {
-      const selectedMonth = monthFilter.value || new Date().toISOString().slice(0, 7);
-      const monthDate = new Date(`${selectedMonth}-01T00:00:00`);
-      const formattedMonth = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      const today = new Date();
-      const printedDate = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-      printMonthLabel.textContent = `Report Month: ${formattedMonth}`;
-      printDateLabel.textContent = `Printed on: ${printedDate}`;
+    function clearMonthFilter(type) {
+      if (type === 'exp') {
+        monthFilterExp.value = '';
+        renderExpenses();
+      } else {
+        monthFilterInc.value = '';
+        renderIncome();
+      }
     }
 
-    // Dark Mode Toggle
-    const currentTheme = localStorage.getItem('theme') || 'light';
-    if (currentTheme === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      themeToggleBtn.textContent = '☀️ Light Mode';
+    // Navigation Logic
+    function switchMainView(viewId) {
+      document.querySelectorAll('.view-page').forEach(v => v.classList.remove('active'));
+      document.getElementById(viewId).classList.add('active');
     }
 
+    function handleLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById('login-user').value;
+      const p = document.getElementById('login-pass').value;
+      if (u === 'Admin' && p === 'Admin@123') {
+        document.getElementById('login-error').style.display = 'none';
+        switchMainView('view-app');
+        loadData();
+      } else {
+        document.getElementById('login-error').style.display = 'block';
+      }
+    }
+
+    function handleLogout() {
+      document.getElementById('login-form').reset();
+      switchMainView('view-landing');
+    }
+
+    function switchTab(tab) {
+      activeTab = tab;
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+
+      if (tab === 'expenses') {
+        document.getElementById('tab-btn-expenses').classList.add('active');
+        document.getElementById('page-expenses').classList.add('active');
+      } else {
+        document.getElementById('tab-btn-income').classList.add('active');
+        document.getElementById('page-income').classList.add('active');
+      }
+    }
+
+    // Theme Toggle
     themeToggleBtn.addEventListener('click', () => {
       let theme = document.documentElement.getAttribute('data-theme');
       if (theme === 'dark') {
         document.documentElement.removeAttribute('data-theme');
-        localStorage.setItem('theme', 'light');
         themeToggleBtn.textContent = '🌙 Dark Mode';
       } else {
         document.documentElement.setAttribute('data-theme', 'dark');
-        localStorage.setItem('theme', 'dark');
         themeToggleBtn.textContent = '☀️ Light Mode';
       }
-      render();
     });
 
-    // Fetch records directly from Supabase
-    async function loadExpenses() {
-      const { data, error } = await db
-        .from('expenses')
-        .select('*')
-        .order('date', { ascending: false });
+    function showSaveError(label, error) {
+      const details = error?.message || String(error || 'Unknown error');
+      console.error(`${label}:`, error);
+      alert(`${label}\n\n${details}\n\nCheck that the Supabase table exists and that RLS allows writes.`);
+    }
 
+    // 2. SUPABASE DATA LOADERS
+    async function loadData() {
+      await Promise.all([loadExpenses(), loadIncome()]);
+    }
+
+    async function loadExpenses() {
+      const { data, error } = await db.from('expenses').select('*').order('date', { ascending: false });
       if (error) {
-        console.error('Fetch error:', error);
-        alert('Could not fetch data from database: ' + error.message);
+        console.error("Error fetching expenses:", error);
         return;
       }
       expenses = data || [];
-      render();
+      renderExpenses();
+      renderIncome();
     }
 
-    // Form Handle Submission to Supabase
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const user = document.getElementById('user').value;
-      const amount = parseFloat(document.getElementById('amount').value);
-      const category = document.getElementById('category').value;
-      const date = document.getElementById('date').value;
-      const description = document.getElementById('description').value;
-
-      if (!user || isNaN(amount) || !category || !date || !description.trim()) {
-        alert("Please fill out all fields.");
+    async function loadIncome() {
+      const { data, error } = await db.from('daily_income').select('*').order('date', { ascending: false });
+      if (error) {
+        console.error("Error fetching daily income:", error);
         return;
       }
+      incomeRecords = data || [];
+      renderIncome();
+    }
 
-      if (editId !== null) {
-        const { error } = await db
-          .from('expenses')
-          .update({ user, amount, category, date, description })
-          .eq('id', editId);
+    // 3. EXPENSES FORM & SUPABASE ACTIONS
+    document.getElementById('expense-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const user_name = document.getElementById('exp-user').value;
+      const amount = parseFloat(document.getElementById('exp-amount').value);
+      const category = document.getElementById('exp-category').value;
+      const date = document.getElementById('exp-date').value;
+      const description = document.getElementById('exp-description').value;
 
-        if (error) alert("Error updating: " + error.message);
-        editId = null;
-        submitBtn.textContent = 'Add Expense';
-        cancelEditBtn.style.display = 'none';
+      const payload = { user_name, amount, category, date, description };
+
+      if (editExpId !== null) {
+        const { error } = await db.from('expenses').update(payload).eq('id', editExpId);
+        if (error) {
+          showSaveError('Expense update failed', error);
+          return;
+        }
+        editExpId = null;
       } else {
-        const { error } = await db
-          .from('expenses')
-          .insert([{ user, amount, category, date, description }]);
-
-        if (error) alert("Error adding expense: " + error.message);
+        const { error } = await db.from('expenses').insert([payload]);
+        if (error) {
+          showSaveError('Expense insert failed', error);
+          return;
+        }
       }
 
-      form.reset();
-      document.getElementById('date').valueAsDate = new Date();
+      resetExpenseForm();
       await loadExpenses();
     });
 
-    cancelEditBtn.addEventListener('click', () => {
-      editId = null;
-      form.reset();
-      document.getElementById('date').valueAsDate = new Date();
-      submitBtn.textContent = 'Add Expense';
-      cancelEditBtn.style.display = 'none';
-    });
-
-    monthFilter.addEventListener('change', () => {
-      updatePrintHeader();
-      render();
-    });
-
-    printReportBtn.addEventListener('click', () => {
-      updatePrintHeader();
-      window.print();
-    });
+    function resetExpenseForm() {
+      document.getElementById('expense-form').reset();
+      document.getElementById('exp-date').value = todayStr;
+      document.getElementById('exp-submit-btn').textContent = 'Add Expense';
+      document.getElementById('exp-cancel-btn').style.display = 'none';
+      editExpId = null;
+    }
 
     function editExpense(id) {
       const item = expenses.find(x => x.id === id);
       if (item) {
-        document.getElementById('user').value = item.user;
-        document.getElementById('amount').value = item.amount;
-        document.getElementById('category').value = item.category;
-        document.getElementById('date').value = item.date;
-        document.getElementById('description').value = item.description;
-
-        editId = id;
-        submitBtn.textContent = 'Update Expense';
-        cancelEditBtn.style.display = 'inline-block';
+        document.getElementById('exp-user').value = item.user_name || item.user || '';
+        document.getElementById('exp-amount').value = item.amount;
+        document.getElementById('exp-category').value = item.category;
+        document.getElementById('exp-date').value = item.date;
+        document.getElementById('exp-description').value = item.description;
+        editExpId = id;
+        document.getElementById('exp-submit-btn').textContent = 'Update Expense';
+        document.getElementById('exp-cancel-btn').style.display = 'inline-block';
       }
     }
 
     async function deleteExpense(id) {
-      if (confirm("Delete this transaction?")) {
+      if (confirm("Delete expense record?")) {
         const { error } = await db.from('expenses').delete().eq('id', id);
-        if (error) alert("Error deleting: " + error.message);
+        if (error) {
+          showSaveError('Expense delete failed', error);
+          return;
+        }
         await loadExpenses();
       }
     }
 
-    function updateChart(categoriesData) {
-      const ctx = document.getElementById('categoryChart').getContext('2d');
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    // 4. DAILY INCOME FORM & SUPABASE ACTIONS
+    document.getElementById('income-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const user_name = document.getElementById('inc-user').value;
+      const date = document.getElementById('inc-date').value;
+      const cash_amount = parseFloat(document.getElementById('inc-cash-amount').value || 0);
+      const momo_amount = parseFloat(document.getElementById('inc-momo-amount').value || 0);
+      const gross_income = cash_amount + momo_amount;
+      const bank_name = document.getElementById('inc-bank-name').value;
+      const bank_amount = parseFloat(document.getElementById('inc-bank-amount').value || 0);
+      const cash_left_in_case = parseFloat(document.getElementById('inc-case-cash').value || 0);
+      const is_transferred_to_bank = document.getElementById('inc-bank-status').value === "true";
+      const notes = document.getElementById('inc-notes').value;
 
-      if (categoryChart) categoryChart.destroy();
-
-      categoryChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: Object.keys(categoriesData),
-          datasets: [{
-            data: Object.values(categoriesData),
-            backgroundColor: ['#4caf50', '#2196f3', '#ff9800', '#9c27b0'],
-            borderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { color: isDark ? '#e0e0e0' : '#333333', font: { size: 12 } }
-            }
-          }
-        }
-      });
-    }
-
-    function render() {
-      updatePrintHeader();
-      const selectedMonth = monthFilter.value;
-      expenseList.innerHTML = '';
-      const expenseCards = document.getElementById('expense-cards');
-      expenseCards.innerHTML = '';
-      let total = 0;
-
-      const categoryTotals = {
-        'Home Use': 0,
-        'Security & Hygiene': 0,
-        'Unplanned / Improvises': 0,
-        'Pharmacy Operations': 0
+      const payload = { 
+        user_name, date, cash_amount, momo_amount, gross_income, 
+        bank_name, bank_amount, cash_left_in_case, 
+        is_transferred_to_bank, notes 
       };
 
-      const filtered = expenses.filter(item => item.date && item.date.startsWith(selectedMonth));
+      if (editIncId !== null) {
+        const { error } = await db.from('daily_income').update(payload).eq('id', editIncId);
+        if (error) {
+          showSaveError('Daily income update failed', error);
+          return;
+        }
+        editIncId = null;
+      } else {
+        const { error } = await db.from('daily_income').insert([payload]);
+        if (error) {
+          showSaveError('Daily income insert failed', error);
+          return;
+        }
+      }
+
+      resetIncomeForm();
+      await loadIncome();
+    });
+
+    function resetIncomeForm() {
+      document.getElementById('income-form').reset();
+      document.getElementById('inc-date').value = todayStr;
+      document.getElementById('inc-cash-amount').value = '';
+      document.getElementById('inc-momo-amount').value = '';
+      document.getElementById('inc-submit-btn').textContent = 'Save Daily Entry';
+      document.getElementById('inc-cancel-btn').style.display = 'none';
+      editIncId = null;
+    }
+
+    function editIncome(id) {
+      const item = incomeRecords.find(x => x.id === id);
+      if (item) {
+        document.getElementById('inc-user').value = item.user_name || item.user;
+        document.getElementById('inc-date').value = item.date;
+        document.getElementById('inc-cash-amount').value = item.cash_amount || '';
+        document.getElementById('inc-momo-amount').value = item.momo_amount || '';
+        document.getElementById('inc-bank-name').value = item.bank_name;
+        document.getElementById('inc-bank-amount').value = item.bank_amount;
+        document.getElementById('inc-case-cash').value = item.cash_left_in_case || 0;
+        document.getElementById('inc-bank-status').value = item.is_transferred_to_bank !== false ? "true" : "false";
+        document.getElementById('inc-notes').value = item.notes || '';
+
+        editIncId = id;
+        document.getElementById('inc-submit-btn').textContent = 'Update Entry';
+        document.getElementById('inc-cancel-btn').style.display = 'inline-block';
+      }
+    }
+
+    async function deleteIncome(id) {
+      if (confirm("Delete daily record?")) {
+        const { error } = await db.from('daily_income').delete().eq('id', id);
+        if (error) console.error("Error deleting daily income:", error);
+        await loadIncome();
+      }
+    }
+
+    // 5. RENDERING DATA IN TABLES
+    monthFilterExp.addEventListener('change', renderExpenses);
+    monthFilterInc.addEventListener('change', renderIncome);
+
+    function renderExpenses() {
+      const selectedMonth = monthFilterExp.value;
+      const listEl = document.getElementById('expense-list');
+      const mobileEl = document.getElementById('expense-mobile-cards');
+      listEl.innerHTML = '';
+      mobileEl.innerHTML = '';
+      let total = 0;
+
+      const filtered = selectedMonth 
+        ? expenses.filter(item => item.date && item.date.startsWith(selectedMonth))
+        : expenses;
 
       filtered.forEach(item => {
         total += Number(item.amount);
-        if (categoryTotals[item.category] !== undefined) {
-          categoryTotals[item.category] += Number(item.amount);
-        }
 
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${item.date}</td>
-          <td>${item.user}</td>
+          <td>${item.user_name || item.user}</td>
           <td>${item.category}</td>
           <td>${item.description}</td>
           <td>${Number(item.amount).toLocaleString()} RWF</td>
-          <td>
+          <td class="actions-column">
             <button class="btn-action btn-edit" onclick="editExpense(${item.id})">Edit</button>
             <button class="btn-action btn-delete" onclick="deleteExpense(${item.id})">Delete</button>
           </td>
         `;
-        expenseList.appendChild(row);
+        listEl.appendChild(row);
 
-        // Also create a mobile-friendly card version
         const card = document.createElement('div');
         card.className = 'expense-card';
         card.innerHTML = `
-          <div class="row"><strong>${item.category}</strong><span>${Number(item.amount).toLocaleString()} RWF</span></div>
-          <div class="row meta"><span>${item.date} — ${item.user}</span><span>
+          <div style="display:flex; justify-content:space-between"><strong>${item.category}</strong><span>${Number(item.amount).toLocaleString()} RWF</span></div>
+          <div style="font-size:0.85em; color:#777; margin-top:4px">${item.date} — ${item.user_name || item.user}</div>
+          <div style="margin:6px 0">${item.description}</div>
+          <div>
             <button class="btn-action btn-edit" onclick="editExpense(${item.id})">Edit</button>
             <button class="btn-action btn-delete" onclick="deleteExpense(${item.id})">Delete</button>
-          </span></div>
-          <div style="margin-top:8px">${item.description}</div>
+          </div>
         `;
-        expenseCards.appendChild(card);
+        mobileEl.appendChild(card);
       });
 
-      totalSpentDisplay.textContent = `${total.toLocaleString()} RWF`;
-      updateChart(categoryTotals);
+      document.getElementById('exp-total-spent').textContent = `${total.toLocaleString()} RWF`;
     }
 
-    // Initial Load
-    loadExpenses();
+    function renderIncome() {
+      const selectedMonth = monthFilterInc.value;
+      const listEl = document.getElementById('income-list');
+      const mobileEl = document.getElementById('income-mobile-cards');
+      listEl.innerHTML = '';
+      mobileEl.innerHTML = '';
+      let totalInc = 0;
+      let totalCash = 0;
+      let totalMomo = 0;
+      let totalBank = 0;
+      let totalCase = 0;
 
-    // Register service worker for PWA (optional)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').then(() => console.log('Service Worker registered')).catch(err => console.warn('SW registration failed', err));
+      const filtered = (selectedMonth 
+        ? incomeRecords.filter(item => item.date && item.date.startsWith(selectedMonth))
+        : incomeRecords
+      ).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      filtered.forEach(item => {
+        const cashAmt = Number(item.cash_amount || 0);
+        const momoAmt = Number(item.momo_amount || 0);
+        const grossAmt = Number(item.gross_income || (cashAmt + momoAmt));
+
+        totalCash += cashAmt;
+        totalMomo += momoAmt;
+        totalInc += grossAmt;
+        totalBank += Number(item.bank_amount || 0);
+        totalCase += Number(item.cash_left_in_case || 0);
+
+        const sameDayExpensesTotal = expenses
+          .filter(exp => exp.date === item.date)
+          .reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+
+        const isOk = item.is_transferred_to_bank !== false;
+        const statusBadge = isOk 
+          ? `<span class="status-badge status-ok">Banked</span>` 
+          : `<span class="status-badge status-emergency">Not Banked</span>`;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.date}</td>
+          <td>${item.user_name || item.user}</td>
+          <td>${cashAmt.toLocaleString()} RWF</td>
+          <td>${momoAmt.toLocaleString()} RWF</td>
+          <td><strong>${grossAmt.toLocaleString()} RWF</strong></td>
+          <td><strong style="color:var(--danger-bg)">${sameDayExpensesTotal.toLocaleString()} RWF</strong></td>
+          <td>${item.bank_name}<br>(${Number(item.bank_amount).toLocaleString()} RWF)</td>
+          <td class="hide-print">${Number(item.cash_left_in_case || 0).toLocaleString()} RWF</td>
+          <td>${statusBadge}</td>
+          <td class="actions-column">
+            <button class="btn-action btn-edit" onclick="editIncome(${item.id})">Edit</button>
+            <button class="btn-action btn-delete" onclick="deleteIncome(${item.id})">Delete</button>
+          </td>
+        `;
+        listEl.appendChild(row);
+
+        const card = document.createElement('div');
+        card.className = 'expense-card';
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between"><strong>${item.date}</strong><span>Gross: ${grossAmt.toLocaleString()} RWF</span></div>
+          <div style="font-size:0.85em; color:#777; margin: 4px 0">
+            <div>Cash: ${cashAmt.toLocaleString()} RWF | MoMo: ${momoAmt.toLocaleString()} RWF</div>
+            <div>Expenses: ${sameDayExpensesTotal.toLocaleString()} RWF</div>
+            <div>Banked: ${Number(item.bank_amount).toLocaleString()} RWF (${item.bank_name})</div>
+            <div>Status: ${isOk ? 'Transferred' : 'Emergency Retained'}</div>
+          </div>
+          <div>
+            <button class="btn-action btn-edit" onclick="editIncome(${item.id})">Edit</button>
+            <button class="btn-action btn-delete" onclick="deleteIncome(${item.id})">Delete</button>
+          </div>
+        `;
+        mobileEl.appendChild(card);
+      });
+
+      if (filtered.length > 0) {
+        const summaryRow = document.createElement('tr');
+        summaryRow.style.fontWeight = 'bold';
+        summaryRow.style.backgroundColor = 'var(--table-header-bg)';
+        summaryRow.innerHTML = `
+          <td colspan="2">Total (${selectedMonth || 'All Months'})</td>
+          <td>${totalCash.toLocaleString()} RWF</td>
+          <td>${totalMomo.toLocaleString()} RWF</td>
+          <td>${totalInc.toLocaleString()} RWF</td>
+          <td>-</td>
+          <td>${totalBank.toLocaleString()} RWF</td>
+          <td class="hide-print">-</td>
+          <td>-</td>
+          <td class="actions-column">-</td>
+        `;
+        listEl.appendChild(summaryRow);
+      }
+
+      document.getElementById('inc-total-income').textContent = `${totalInc.toLocaleString()} RWF`;
+      document.getElementById('inc-total-cash').textContent = `${totalCash.toLocaleString()} RWF`;
+      document.getElementById('inc-total-momo').textContent = `${totalMomo.toLocaleString()} RWF`;
+      document.getElementById('inc-total-banked').textContent = `${totalBank.toLocaleString()} RWF`;
+      document.getElementById('inc-total-case').textContent = `${totalCase.toLocaleString()} RWF`;
+    }
+
+    // Reports Export/Print
+    document.getElementById('print-btn').addEventListener('click', () => {
+      const activeMonth = activeTab === 'expenses' ? monthFilterExp.value : monthFilterInc.value;
+      const filterLabel = activeMonth ? `Month: ${activeMonth}` : 'All Months (Full History)';
+      const title = activeTab === 'expenses' ? 'Pharmacy Expense Report' : 'Daily Income & Register Report';
+      document.getElementById('print-page-title').textContent = `${title} (${filterLabel})`;
+      document.getElementById('print-current-date').textContent = new Date().toLocaleDateString();
+      window.print();
+    });
+
+    document.getElementById('export-btn').addEventListener('click', () => {
+      if (activeTab === 'expenses') exportExpensesCSV();
+      else exportIncomeCSV();
+    });
+
+    function exportExpensesCSV() {
+      const selectedMonth = monthFilterExp.value;
+      const filtered = selectedMonth 
+        ? expenses.filter(item => item.date && item.date.startsWith(selectedMonth))
+        : expenses;
+
+      if (!filtered.length) return alert("No expenses to export.");
+
+      let csv = "data:text/csv;charset=utf-8,Date,Added By,Category,Description,Amount (RWF)\n";
+      filtered.forEach(item => {
+        csv += `${item.date},${item.user || item.user_name},${item.category},"${item.description}",${item.amount}\n`;
+      });
+      downloadFile(csv, `Expenses_${selectedMonth || 'All_Time'}.csv`);
+    }
+
+    function exportIncomeCSV() {
+      const selectedMonth = monthFilterInc.value;
+      const filtered = selectedMonth 
+        ? incomeRecords.filter(item => item.date && item.date.startsWith(selectedMonth))
+        : incomeRecords;
+
+      if (!filtered.length) return alert("No income records to export.");
+
+      let csv = "data:text/csv;charset=utf-8,Date,Added By,Cash (RWF),MoMoPay (RWF),Gross Income (RWF),Expenses (RWF),Bank Name,Banked (RWF),Banked Status,Notes\n";
+      filtered.forEach(item => {
+        const cashAmt = item.cash_amount || 0;
+        const momoAmt = item.momo_amount || 0;
+        const grossAmt = item.gross_income || (cashAmt + momoAmt);
+        const sameDayExp = expenses.filter(e => e.date === item.date).reduce((sum, e) => sum + Number(e.amount||0), 0);
+        const statusStr = item.is_transferred_to_bank !== false ? 'Transferred' : 'Held Emergency';
+        csv += `${item.date},${item.user_name || item.user},${cashAmt},${momoAmt},${grossAmt},${sameDayExp},${item.bank_name},${item.bank_amount},${statusStr},"${item.notes||''}"\n`;
+      });
+      downloadFile(csv, `Daily_Income_${selectedMonth || 'All_Time'}.csv`);
+    }
+
+    function downloadFile(content, filename) {
+      const encodedUri = encodeURI(content);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   </script>
 </body>
