@@ -3,9 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title> Pharma Tracker</title>
+  <title>Integrated Pharmacy Management System</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- html2pdf Library for Client-side PDF Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="logo.svg" type="image/svg+xml">
   <meta name="theme-color" content="#2e7d32">
@@ -59,7 +62,7 @@
       box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
     .brand-logo {
-      font-size: 2rem;
+      font-size: 1.8rem;
       font-weight: bold;
       color: var(--button-bg);
       margin-bottom: 15px;
@@ -100,6 +103,7 @@
       font-weight: bold;
     }
     .export-btn { background-color: #0288d1; }
+    .pdf-btn { background-color: #e65100; }
     .print-btn { background-color: #7b1fa2; }
     .logout-btn { background-color: #616161; }
 
@@ -108,6 +112,7 @@
       gap: 10px;
       margin-bottom: 20px;
       border-bottom: 2px solid var(--border-color);
+      flex-wrap: wrap;
     }
 
     .nav-tab {
@@ -195,6 +200,34 @@
       min-width: 160px;
     }
 
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .dash-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .dash-card h4 {
+      margin: 0 0 10px 0;
+      color: #777;
+      font-size: 0.85em;
+      text-transform: uppercase;
+    }
+
+    .dash-card .val {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: var(--button-bg);
+    }
+
     .status-badge {
       padding: 3px 6px;
       border-radius: 4px;
@@ -205,6 +238,30 @@
     .status-emergency { background: #ffebee; color: #c62828; }
 
     .mobile-cards { display: none; }
+    .mobile-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .mobile-card-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.9em;
+    }
+    .mobile-card-row:last-child { border-bottom: none; }
+    .mobile-card-row span { color: #666; }
+    .mobile-card .mobile-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
     .print-only-header { display: none; }
 
     footer {
@@ -229,19 +286,44 @@
     }
 
     @media (max-width: 768px) {
+      body { padding: 15px 15px 90px 15px; }
       .container { padding: 15px; }
+      .header-row { align-items: flex-start; }
+      .header-row h1 {
+        width: 100%;
+        font-size: 1.5rem;
+        margin: 0;
+      }
+      .header-btns {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+      .action-btn, .theme-toggle-btn {
+        width: 100%;
+      }
       form { flex-direction: column; }
       input, select, button { width: 100%; }
       table { display: none; }
       .mobile-cards { display: block; }
       .nav-tabs { flex-direction: column; }
-      .expense-card {
+      .nav-tab { width: 100%; }
+      .expense-card, .income-card, .debt-card, .po-card {
         background: var(--card-bg);
         border: 1px solid var(--border-color);
         padding: 12px;
         border-radius: 8px;
         margin-bottom: 10px;
       }
+    }
+
+    @media (max-width: 480px) {
+      .header-btns { grid-template-columns: 1fr; }
+      .landing-box { margin: 40px 12px; padding: 20px; }
+      .brand-logo { font-size: 1.4rem; }
+      .summary-cards { flex-direction: column; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .mobile-card-row { flex-direction: column; }
     }
   </style>
 </head>
@@ -250,8 +332,8 @@
   <!-- VIEW 1: LANDING PAGE -->
   <div id="view-landing" class="view-page active">
     <div class="landing-box">
-      <div class="brand-logo"> Pharma Tracker</div>
-      <p style="margin-bottom: 20px; color: #666;">Welcome to La Providence Pharmacy financial & sales tracker application.</p>
+      <div class="brand-logo">Integrated Pharmacy Management System</div>
+      <p style="margin-bottom: 20px; color: #666;">Welcome to La Providence Integrated Pharmacy Management & Financial System.</p>
       <button class="action-btn full-width" onclick="switchMainView('view-login')">Go to Login</button>
     </div>
   </div>
@@ -272,16 +354,17 @@
 
   <!-- VIEW 3: MAIN APP DASHBOARD -->
   <div id="view-app" class="view-page">
-    <div class="container">
+    <div class="container" id="printable-area">
       <div class="print-only-header">
         <h1>La Providence Pharmacy</h1>
         <p><strong id="print-page-title">Report</strong> | Date: <span id="print-current-date"></span></p>
       </div>
 
       <div class="header-row">
-        <h1>Pharmacy Management</h1>
+        <h1>Integrated Pharmacy Management System</h1>
         <div class="header-btns">
           <button class="action-btn export-btn" id="export-btn">📥 CSV Export</button>
+          <button class="action-btn pdf-btn" id="export-pdf-btn">📄 PDF Export</button>
           <button class="action-btn print-btn" id="print-btn">🖨️ Print Report</button>
           <button class="theme-toggle-btn" id="theme-toggle">🌙 Dark Mode</button>
           <button class="action-btn logout-btn" onclick="handleLogout()">Logout</button>
@@ -289,12 +372,53 @@
       </div>
 
       <div class="nav-tabs">
-        <button class="nav-tab active" id="tab-btn-expenses" onclick="switchTab('expenses')"> Pharmacy Expenses</button>
+        <button class="nav-tab active" id="tab-btn-dashboard" onclick="switchTab('dashboard')"> Dashboard</button>
+        <button class="nav-tab" id="tab-btn-expenses" onclick="switchTab('expenses')"> Expenses</button>
         <button class="nav-tab" id="tab-btn-income" onclick="switchTab('income')"> Daily Income & Banking</button>
+        <button class="nav-tab" id="tab-btn-debts" onclick="switchTab('debts')"> Pharmacy Debts</button>
+        <button class="nav-tab" id="tab-btn-orders" onclick="switchTab('orders')"> Purchase Orders</button>
+      </div>
+
+      <!-- PAGE 0: DASHBOARD -->
+      <div id="page-dashboard" class="tab-page active">
+        <h2>Executive Financial Overview</h2>
+        <div class="dashboard-grid">
+          <div class="dash-card">
+            <h4>Today Revenue</h4>
+            <div class="val" id="dash-today-rev">0 RWF</div>
+            <small style="color:#777">Yesterday: <span id="dash-yest-rev">0 RWF</span></small>
+          </div>
+          <div class="dash-card">
+            <h4>Total Monthly Revenue</h4>
+            <div class="val" id="dash-month-rev">0 RWF</div>
+          </div>
+          <div class="dash-card">
+            <h4>Today Expenses</h4>
+            <div class="val" id="dash-today-exp">0 RWF</div>
+            <small style="color:#777">Yesterday: <span id="dash-yest-exp">0 RWF</span></small>
+          </div>
+          <div class="dash-card">
+            <h4>Total Monthly Expenses</h4>
+            <div class="val" id="dash-month-exp">0 RWF</div>
+          </div>
+          <div class="dash-card">
+            <h4>Bank Balance (Total Banked)</h4>
+            <div class="val" id="dash-bank-bal">0 RWF</div>
+          </div>
+          <div class="dash-card">
+            <h4>Today Debts Added</h4>
+            <div class="val" id="dash-today-debts">0 RWF</div>
+            <small style="color:#777">Yesterday: <span id="dash-yest-debts">0 RWF</span></small>
+          </div>
+          <div class="dash-card">
+            <h4>Total Monthly Debts</h4>
+            <div class="val" id="dash-month-debts">0 RWF</div>
+          </div>
+        </div>
       </div>
 
       <!-- PAGE 1: PHARMACY EXPENSES -->
-      <div id="page-expenses" class="tab-page active">
+      <div id="page-expenses" class="tab-page">
         <form id="expense-form">
           <select id="exp-user" required>
             <option value="">Added By *</option>
@@ -416,6 +540,106 @@
         </table>
         <div id="income-mobile-cards" class="mobile-cards"></div>
       </div>
+
+      <!-- PAGE 3: PHARMACY DEBTS -->
+      <div id="page-debts" class="tab-page">
+        <form id="debt-form">
+          <select id="debt-user" required>
+            <option value="">Added By *</option>
+            <option value="Manasseh">Manasseh</option>
+            <option value="Claire">Claire</option>
+          </select>
+          <input type="date" id="debt-date" required>
+          <input type="text" id="debt-name" placeholder="Debtor Name *" required>
+          <input type="number" id="debt-amount" placeholder="Amount (RWF) *" required>
+          <select id="debt-status" required>
+            <option value="Unpaid">Unpaid</option>
+            <option value="Paid">Paid</option>
+          </select>
+          <input type="text" id="debt-notes" placeholder="Notes / Medicine Sold">
+          <button type="submit" id="debt-submit-btn">Add Debt Record</button>
+          <button type="button" id="debt-cancel-btn" style="display:none; background:#757575;" onclick="resetDebtForm()">Cancel</button>
+        </form>
+
+        <hr>
+
+        <div class="filter-section">
+          <label><strong>Filter Month: </strong></label>
+          <input type="month" id="debt-month-filter">
+          <button type="button" class="action-btn" onclick="clearMonthFilter('debt')">Show All Months</button>
+        </div>
+
+        <div class="summary-cards">
+          <div class="summary-card">Total Debts Recorded: <span id="debt-total-amount">0 RWF</span></div>
+        </div>
+
+        <hr>
+
+        <h2>Pharmacy Debts Ledger</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Debtor Name</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Added By</th>
+              <th>Notes</th>
+              <th class="actions-column">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="debt-list"></tbody>
+        </table>
+        <div id="debt-mobile-cards" class="mobile-cards"></div>
+      </div>
+
+      <!-- PAGE 4: PURCHASING ORDERS -->
+      <div id="page-orders" class="tab-page">
+        <form id="order-form">
+          <select id="po-user" required>
+            <option value="">Added By *</option>
+            <option value="Manasseh">Manasseh</option>
+            <option value="Claire">Claire</option>
+          </select>
+          <input type="date" id="po-date" required>
+          <input type="text" id="po-invoice" placeholder="Invoice Number *" required>
+          <input type="text" id="po-supplier" placeholder="Supplier Name *" required>
+          <input type="number" id="po-amount" placeholder="Supplier Amount (RWF) *" required>
+          <button type="submit" id="po-submit-btn">Save Purchase Order</button>
+          <button type="button" id="po-cancel-btn" style="display:none; background:#757575;" onclick="resetOrderForm()">Cancel</button>
+        </form>
+
+        <hr>
+
+        <div class="filter-section">
+          <label><strong>Filter Month: </strong></label>
+          <input type="month" id="po-month-filter">
+          <button type="button" class="action-btn" onclick="clearMonthFilter('po')">Show All Months</button>
+        </div>
+
+        <div class="summary-cards">
+          <div class="summary-card">Total PO Amount: <span id="po-total-amount">0 RWF</span></div>
+        </div>
+
+        <hr>
+
+        <h2>Purchasing Orders History</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Invoice #</th>
+              <th>Supplier Name</th>
+              <th>Amount</th>
+              <th>Added By</th>
+              <th class="actions-column">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="po-list"></tbody>
+        </table>
+        <div id="po-mobile-cards" class="mobile-cards"></div>
+      </div>
+
     </div>
   </div>
 
@@ -431,30 +655,40 @@
 
     let expenses = [];
     let incomeRecords = [];
-    let activeTab = 'expenses';
+    let debts = [];
+    let orders = [];
+
+    let activeTab = 'dashboard';
     let editExpId = null;
     let editIncId = null;
+    let editDebtId = null;
+    let editPoId = null;
 
     const monthFilterExp = document.getElementById('exp-month-filter');
     const monthFilterInc = document.getElementById('inc-month-filter');
+    const monthFilterDebt = document.getElementById('debt-month-filter');
+    const monthFilterPo = document.getElementById('po-month-filter');
     const themeToggleBtn = document.getElementById('theme-toggle');
 
     // Auto Dates
     const todayStr = new Date().toISOString().slice(0, 10);
     const monthStr = new Date().toISOString().slice(0, 7);
+
     document.getElementById('exp-date').value = todayStr;
     document.getElementById('inc-date').value = todayStr;
+    document.getElementById('debt-date').value = todayStr;
+    document.getElementById('po-date').value = todayStr;
+
     monthFilterExp.value = monthStr;
     monthFilterInc.value = monthStr;
+    monthFilterDebt.value = monthStr;
+    monthFilterPo.value = monthStr;
 
     function clearMonthFilter(type) {
-      if (type === 'exp') {
-        monthFilterExp.value = '';
-        renderExpenses();
-      } else {
-        monthFilterInc.value = '';
-        renderIncome();
-      }
+      if (type === 'exp') { monthFilterExp.value = ''; renderExpenses(); }
+      else if (type === 'inc') { monthFilterInc.value = ''; renderIncome(); }
+      else if (type === 'debt') { monthFilterDebt.value = ''; renderDebts(); }
+      else if (type === 'po') { monthFilterPo.value = ''; renderOrders(); }
     }
 
     // Navigation Logic
@@ -486,13 +720,10 @@
       document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
 
-      if (tab === 'expenses') {
-        document.getElementById('tab-btn-expenses').classList.add('active');
-        document.getElementById('page-expenses').classList.add('active');
-      } else {
-        document.getElementById('tab-btn-income').classList.add('active');
-        document.getElementById('page-income').classList.add('active');
-      }
+      document.getElementById(`tab-btn-${tab}`).classList.add('active');
+      document.getElementById(`page-${tab}`).classList.add('active');
+
+      if (tab === 'dashboard') updateDashboard();
     }
 
     // Theme Toggle
@@ -515,56 +746,87 @@
 
     // 2. SUPABASE DATA LOADERS
     async function loadData() {
-      await Promise.all([loadExpenses(), loadIncome()]);
+      await Promise.all([loadExpenses(), loadIncome(), loadDebts(), loadOrders()]);
+      updateDashboard();
     }
 
     async function loadExpenses() {
       const { data, error } = await db.from('expenses').select('*').order('date', { ascending: false });
-      if (error) {
-        console.error("Error fetching expenses:", error);
-        return;
-      }
-      expenses = data || [];
-      renderExpenses();
-      renderIncome();
+      if (!error) { expenses = data || []; renderExpenses(); }
     }
 
     async function loadIncome() {
       const { data, error } = await db.from('daily_income').select('*').order('date', { ascending: false });
-      if (error) {
-        console.error("Error fetching daily income:", error);
-        return;
-      }
-      incomeRecords = data || [];
-      renderIncome();
+      if (!error) { incomeRecords = data || []; renderIncome(); }
     }
 
-    // 3. EXPENSES FORM & SUPABASE ACTIONS
+    async function loadDebts() {
+      const { data, error } = await db.from('pharmacy_debts').select('*').order('date', { ascending: false });
+      if (!error) { debts = data || []; renderDebts(); }
+    }
+
+    async function loadOrders() {
+      const { data, error } = await db.from('purchase_orders').select('*').order('date', { ascending: false });
+      if (!error) { orders = data || []; renderOrders(); }
+    }
+
+    // 3. DASHBOARD CALCULATIONS
+    function updateDashboard() {
+      const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const curMonth = new Date().toISOString().slice(0, 7);
+
+      // Revenue
+      const todayRev = incomeRecords.filter(r => r.date === todayStr).reduce((s, r) => s + Number(r.gross_income || (Number(r.cash_amount||0)+Number(r.momo_amount||0))), 0);
+      const yestRev = incomeRecords.filter(r => r.date === yesterdayStr).reduce((s, r) => s + Number(r.gross_income || (Number(r.cash_amount||0)+Number(r.momo_amount||0))), 0);
+      const monthRev = incomeRecords.filter(r => r.date && r.date.startsWith(curMonth)).reduce((s, r) => s + Number(r.gross_income || (Number(r.cash_amount||0)+Number(r.momo_amount||0))), 0);
+
+      // Expenses
+      const todayExp = expenses.filter(r => r.date === todayStr).reduce((s, r) => s + Number(r.amount || 0), 0);
+      const yestExp = expenses.filter(r => r.date === yesterdayStr).reduce((s, r) => s + Number(r.amount || 0), 0);
+      const monthExp = expenses.filter(r => r.date && r.date.startsWith(curMonth)).reduce((s, r) => s + Number(r.amount || 0), 0);
+
+      // Bank Balance
+      const totalBanked = incomeRecords.reduce((s, r) => s + Number(r.bank_amount || 0), 0);
+
+      // Debts
+      const todayDebts = debts.filter(r => r.date === todayStr).reduce((s, r) => s + Number(r.amount || 0), 0);
+      const yestDebts = debts.filter(r => r.date === yesterdayStr).reduce((s, r) => s + Number(r.amount || 0), 0);
+      const monthDebts = debts.filter(r => r.date && r.date.startsWith(curMonth)).reduce((s, r) => s + Number(r.amount || 0), 0);
+
+      document.getElementById('dash-today-rev').textContent = `${todayRev.toLocaleString()} RWF`;
+      document.getElementById('dash-yest-rev').textContent = `${yestRev.toLocaleString()} RWF`;
+      document.getElementById('dash-month-rev').textContent = `${monthRev.toLocaleString()} RWF`;
+
+      document.getElementById('dash-today-exp').textContent = `${todayExp.toLocaleString()} RWF`;
+      document.getElementById('dash-yest-exp').textContent = `${yestExp.toLocaleString()} RWF`;
+      document.getElementById('dash-month-exp').textContent = `${monthExp.toLocaleString()} RWF`;
+
+      document.getElementById('dash-bank-bal').textContent = `${totalBanked.toLocaleString()} RWF`;
+
+      document.getElementById('dash-today-debts').textContent = `${todayDebts.toLocaleString()} RWF`;
+      document.getElementById('dash-yest-debts').textContent = `${yestDebts.toLocaleString()} RWF`;
+      document.getElementById('dash-month-debts').textContent = `${monthDebts.toLocaleString()} RWF`;
+    }
+
+    // 4. FORMS & ACTIONS
+    // Expenses Form
     document.getElementById('expense-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const user_name = document.getElementById('exp-user').value;
-      const amount = parseFloat(document.getElementById('exp-amount').value);
-      const category = document.getElementById('exp-category').value;
-      const date = document.getElementById('exp-date').value;
-      const description = document.getElementById('exp-description').value;
-
-      const payload = { user_name, amount, category, date, description };
+      const payload = {
+        user_name: document.getElementById('exp-user').value,
+        amount: parseFloat(document.getElementById('exp-amount').value),
+        category: document.getElementById('exp-category').value,
+        date: document.getElementById('exp-date').value,
+        description: document.getElementById('exp-description').value
+      };
 
       if (editExpId !== null) {
         const { error } = await db.from('expenses').update(payload).eq('id', editExpId);
-        if (error) {
-          showSaveError('Expense update failed', error);
-          return;
-        }
-        editExpId = null;
+        if (error) return showSaveError('Expense update failed', error);
       } else {
         const { error } = await db.from('expenses').insert([payload]);
-        if (error) {
-          showSaveError('Expense insert failed', error);
-          return;
-        }
+        if (error) return showSaveError('Expense insert failed', error);
       }
-
       resetExpenseForm();
       await loadExpenses();
     });
@@ -594,49 +856,36 @@
     async function deleteExpense(id) {
       if (confirm("Delete expense record?")) {
         const { error } = await db.from('expenses').delete().eq('id', id);
-        if (error) {
-          showSaveError('Expense delete failed', error);
-          return;
-        }
+        if (error) return showSaveError('Expense delete failed', error);
         await loadExpenses();
       }
     }
 
-    // 4. DAILY INCOME FORM & SUPABASE ACTIONS
+    // Daily Income Form
     document.getElementById('income-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const user_name = document.getElementById('inc-user').value;
-      const date = document.getElementById('inc-date').value;
       const cash_amount = parseFloat(document.getElementById('inc-cash-amount').value || 0);
       const momo_amount = parseFloat(document.getElementById('inc-momo-amount').value || 0);
-      const gross_income = cash_amount + momo_amount;
-      const bank_name = document.getElementById('inc-bank-name').value;
-      const bank_amount = parseFloat(document.getElementById('inc-bank-amount').value || 0);
-      const cash_left_in_case = parseFloat(document.getElementById('inc-case-cash').value || 0);
-      const is_transferred_to_bank = document.getElementById('inc-bank-status').value === "true";
-      const notes = document.getElementById('inc-notes').value;
 
       const payload = { 
-        user_name, date, cash_amount, momo_amount, gross_income, 
-        bank_name, bank_amount, cash_left_in_case, 
-        is_transferred_to_bank, notes 
+        user_name: document.getElementById('inc-user').value,
+        date: document.getElementById('inc-date').value,
+        cash_amount, momo_amount,
+        gross_income: cash_amount + momo_amount, 
+        bank_name: document.getElementById('inc-bank-name').value,
+        bank_amount: parseFloat(document.getElementById('inc-bank-amount').value || 0),
+        cash_left_in_case: parseFloat(document.getElementById('inc-case-cash').value || 0),
+        is_transferred_to_bank: document.getElementById('inc-bank-status').value === "true",
+        notes: document.getElementById('inc-notes').value
       };
 
       if (editIncId !== null) {
         const { error } = await db.from('daily_income').update(payload).eq('id', editIncId);
-        if (error) {
-          showSaveError('Daily income update failed', error);
-          return;
-        }
-        editIncId = null;
+        if (error) return showSaveError('Daily income update failed', error);
       } else {
         const { error } = await db.from('daily_income').insert([payload]);
-        if (error) {
-          showSaveError('Daily income insert failed', error);
-          return;
-        }
+        if (error) return showSaveError('Daily income insert failed', error);
       }
-
       resetIncomeForm();
       await loadIncome();
     });
@@ -644,8 +893,6 @@
     function resetIncomeForm() {
       document.getElementById('income-form').reset();
       document.getElementById('inc-date').value = todayStr;
-      document.getElementById('inc-cash-amount').value = '';
-      document.getElementById('inc-momo-amount').value = '';
       document.getElementById('inc-submit-btn').textContent = 'Save Daily Entry';
       document.getElementById('inc-cancel-btn').style.display = 'none';
       editIncId = null;
@@ -663,7 +910,6 @@
         document.getElementById('inc-case-cash').value = item.cash_left_in_case || 0;
         document.getElementById('inc-bank-status').value = item.is_transferred_to_bank !== false ? "true" : "false";
         document.getElementById('inc-notes').value = item.notes || '';
-
         editIncId = id;
         document.getElementById('inc-submit-btn').textContent = 'Update Entry';
         document.getElementById('inc-cancel-btn').style.display = 'inline-block';
@@ -678,16 +924,123 @@
       }
     }
 
+    // Debts Form
+    document.getElementById('debt-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        user_name: document.getElementById('debt-user').value,
+        date: document.getElementById('debt-date').value,
+        debtor_name: document.getElementById('debt-name').value,
+        amount: parseFloat(document.getElementById('debt-amount').value),
+        status: document.getElementById('debt-status').value,
+        notes: document.getElementById('debt-notes').value
+      };
+
+      if (editDebtId !== null) {
+        const { error } = await db.from('pharmacy_debts').update(payload).eq('id', editDebtId);
+        if (error) return showSaveError('Debt record update failed', error);
+      } else {
+        const { error } = await db.from('pharmacy_debts').insert([payload]);
+        if (error) return showSaveError('Debt record insert failed', error);
+      }
+      resetDebtForm();
+      await loadDebts();
+    });
+
+    function resetDebtForm() {
+      document.getElementById('debt-form').reset();
+      document.getElementById('debt-date').value = todayStr;
+      document.getElementById('debt-submit-btn').textContent = 'Add Debt Record';
+      document.getElementById('debt-cancel-btn').style.display = 'none';
+      editDebtId = null;
+    }
+
+    function editDebt(id) {
+      const item = debts.find(x => x.id === id);
+      if (item) {
+        document.getElementById('debt-user').value = item.user_name || '';
+        document.getElementById('debt-date').value = item.date;
+        document.getElementById('debt-name').value = item.debtor_name;
+        document.getElementById('debt-amount').value = item.amount;
+        document.getElementById('debt-status').value = item.status;
+        document.getElementById('debt-notes').value = item.notes || '';
+        editDebtId = id;
+        document.getElementById('debt-submit-btn').textContent = 'Update Debt';
+        document.getElementById('debt-cancel-btn').style.display = 'inline-block';
+      }
+    }
+
+    async function deleteDebt(id) {
+      if (confirm("Delete debt record?")) {
+        const { error } = await db.from('pharmacy_debts').delete().eq('id', id);
+        if (error) return showSaveError('Debt delete failed', error);
+        await loadDebts();
+      }
+    }
+
+    // Purchase Orders Form
+    document.getElementById('order-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        user_name: document.getElementById('po-user').value,
+        date: document.getElementById('po-date').value,
+        invoice_number: document.getElementById('po-invoice').value,
+        supplier_name: document.getElementById('po-supplier').value,
+        amount: parseFloat(document.getElementById('po-amount').value)
+      };
+
+      if (editPoId !== null) {
+        const { error } = await db.from('purchase_orders').update(payload).eq('id', editPoId);
+        if (error) return showSaveError('Purchase order update failed', error);
+      } else {
+        const { error } = await db.from('purchase_orders').insert([payload]);
+        if (error) return showSaveError('Purchase order insert failed', error);
+      }
+      resetOrderForm();
+      await loadOrders();
+    });
+
+    function resetOrderForm() {
+      document.getElementById('order-form').reset();
+      document.getElementById('po-date').value = todayStr;
+      document.getElementById('po-submit-btn').textContent = 'Save Purchase Order';
+      document.getElementById('po-cancel-btn').style.display = 'none';
+      editPoId = null;
+    }
+
+    function editOrder(id) {
+      const item = orders.find(x => x.id === id);
+      if (item) {
+        document.getElementById('po-user').value = item.user_name || '';
+        document.getElementById('po-date').value = item.date;
+        document.getElementById('po-invoice').value = item.invoice_number;
+        document.getElementById('po-supplier').value = item.supplier_name;
+        document.getElementById('po-amount').value = item.amount;
+        editPoId = id;
+        document.getElementById('po-submit-btn').textContent = 'Update Order';
+        document.getElementById('po-cancel-btn').style.display = 'inline-block';
+      }
+    }
+
+    async function deleteOrder(id) {
+      if (confirm("Delete purchase order?")) {
+        const { error } = await db.from('purchase_orders').delete().eq('id', id);
+        if (error) return showSaveError('Order delete failed', error);
+        await loadOrders();
+      }
+    }
+
     // 5. RENDERING DATA IN TABLES
     monthFilterExp.addEventListener('change', renderExpenses);
     monthFilterInc.addEventListener('change', renderIncome);
+    monthFilterDebt.addEventListener('change', renderDebts);
+    monthFilterPo.addEventListener('change', renderOrders);
 
     function renderExpenses() {
       const selectedMonth = monthFilterExp.value;
       const listEl = document.getElementById('expense-list');
       const mobileEl = document.getElementById('expense-mobile-cards');
-      listEl.innerHTML = '';
-      mobileEl.innerHTML = '';
+      listEl.innerHTML = ''; mobileEl.innerHTML = '';
       let total = 0;
 
       const filtered = selectedMonth 
@@ -696,7 +1049,6 @@
 
       filtered.forEach(item => {
         total += Number(item.amount);
-
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${item.date}</td>
@@ -712,19 +1064,20 @@
         listEl.appendChild(row);
 
         const card = document.createElement('div');
-        card.className = 'expense-card';
+        card.className = 'mobile-card';
         card.innerHTML = `
-          <div style="display:flex; justify-content:space-between"><strong>${item.category}</strong><span>${Number(item.amount).toLocaleString()} RWF</span></div>
-          <div style="font-size:0.85em; color:#777; margin-top:4px">${item.date} — ${item.user_name || item.user}</div>
-          <div style="margin:6px 0">${item.description}</div>
-          <div>
+          <div class="mobile-card-row"><span>Date</span><strong>${item.date}</strong></div>
+          <div class="mobile-card-row"><span>Added By</span><strong>${item.user_name || item.user}</strong></div>
+          <div class="mobile-card-row"><span>Category</span><strong>${item.category}</strong></div>
+          <div class="mobile-card-row"><span>Description</span><strong>${item.description}</strong></div>
+          <div class="mobile-card-row"><span>Amount</span><strong>${Number(item.amount).toLocaleString()} RWF</strong></div>
+          <div class="mobile-actions">
             <button class="btn-action btn-edit" onclick="editExpense(${item.id})">Edit</button>
             <button class="btn-action btn-delete" onclick="deleteExpense(${item.id})">Delete</button>
           </div>
         `;
         mobileEl.appendChild(card);
       });
-
       document.getElementById('exp-total-spent').textContent = `${total.toLocaleString()} RWF`;
     }
 
@@ -732,13 +1085,8 @@
       const selectedMonth = monthFilterInc.value;
       const listEl = document.getElementById('income-list');
       const mobileEl = document.getElementById('income-mobile-cards');
-      listEl.innerHTML = '';
-      mobileEl.innerHTML = '';
-      let totalInc = 0;
-      let totalCash = 0;
-      let totalMomo = 0;
-      let totalBank = 0;
-      let totalCase = 0;
+      listEl.innerHTML = ''; mobileEl.innerHTML = '';
+      let totalInc = 0, totalCash = 0, totalMomo = 0, totalBank = 0, totalCase = 0;
 
       const filtered = (selectedMonth 
         ? incomeRecords.filter(item => item.date && item.date.startsWith(selectedMonth))
@@ -750,11 +1098,8 @@
         const momoAmt = Number(item.momo_amount || 0);
         const grossAmt = Number(item.gross_income || (cashAmt + momoAmt));
 
-        totalCash += cashAmt;
-        totalMomo += momoAmt;
-        totalInc += grossAmt;
-        totalBank += Number(item.bank_amount || 0);
-        totalCase += Number(item.cash_left_in_case || 0);
+        totalCash += cashAmt; totalMomo += momoAmt; totalInc += grossAmt;
+        totalBank += Number(item.bank_amount || 0); totalCase += Number(item.cash_left_in_case || 0);
 
         const sameDayExpensesTotal = expenses
           .filter(exp => exp.date === item.date)
@@ -784,40 +1129,23 @@
         listEl.appendChild(row);
 
         const card = document.createElement('div');
-        card.className = 'expense-card';
+        card.className = 'mobile-card';
         card.innerHTML = `
-          <div style="display:flex; justify-content:space-between"><strong>${item.date}</strong><span>Gross: ${grossAmt.toLocaleString()} RWF</span></div>
-          <div style="font-size:0.85em; color:#777; margin: 4px 0">
-            <div>Cash: ${cashAmt.toLocaleString()} RWF | MoMo: ${momoAmt.toLocaleString()} RWF</div>
-            <div>Expenses: ${sameDayExpensesTotal.toLocaleString()} RWF</div>
-            <div>Banked: ${Number(item.bank_amount).toLocaleString()} RWF (${item.bank_name})</div>
-            <div>Status: ${isOk ? 'Transferred' : 'Emergency Retained'}</div>
-          </div>
-          <div>
+          <div class="mobile-card-row"><span>Date</span><strong>${item.date}</strong></div>
+          <div class="mobile-card-row"><span>Added By</span><strong>${item.user_name || item.user}</strong></div>
+          <div class="mobile-card-row"><span>Cash</span><strong>${cashAmt.toLocaleString()} RWF</strong></div>
+          <div class="mobile-card-row"><span>MoMo</span><strong>${momoAmt.toLocaleString()} RWF</strong></div>
+          <div class="mobile-card-row"><span>Gross</span><strong>${grossAmt.toLocaleString()} RWF</strong></div>
+          <div class="mobile-card-row"><span>Expenses</span><strong>${sameDayExpensesTotal.toLocaleString()} RWF</strong></div>
+          <div class="mobile-card-row"><span>Bank</span><strong>${item.bank_name} (${Number(item.bank_amount).toLocaleString()} RWF)</strong></div>
+          <div class="mobile-card-row"><span>Status</span>${statusBadge}</div>
+          <div class="mobile-actions">
             <button class="btn-action btn-edit" onclick="editIncome(${item.id})">Edit</button>
             <button class="btn-action btn-delete" onclick="deleteIncome(${item.id})">Delete</button>
           </div>
         `;
         mobileEl.appendChild(card);
       });
-
-      if (filtered.length > 0) {
-        const summaryRow = document.createElement('tr');
-        summaryRow.style.fontWeight = 'bold';
-        summaryRow.style.backgroundColor = 'var(--table-header-bg)';
-        summaryRow.innerHTML = `
-          <td colspan="2">Total (${selectedMonth || 'All Months'})</td>
-          <td>${totalCash.toLocaleString()} RWF</td>
-          <td>${totalMomo.toLocaleString()} RWF</td>
-          <td>${totalInc.toLocaleString()} RWF</td>
-          <td>-</td>
-          <td>${totalBank.toLocaleString()} RWF</td>
-          <td class="hide-print">-</td>
-          <td>-</td>
-          <td class="actions-column">-</td>
-        `;
-        listEl.appendChild(summaryRow);
-      }
 
       document.getElementById('inc-total-income').textContent = `${totalInc.toLocaleString()} RWF`;
       document.getElementById('inc-total-cash').textContent = `${totalCash.toLocaleString()} RWF`;
@@ -826,54 +1154,147 @@
       document.getElementById('inc-total-case').textContent = `${totalCase.toLocaleString()} RWF`;
     }
 
-    // Reports Export/Print
+    function renderDebts() {
+      const selectedMonth = monthFilterDebt.value;
+      const listEl = document.getElementById('debt-list');
+      const mobileEl = document.getElementById('debt-mobile-cards');
+      listEl.innerHTML = ''; mobileEl.innerHTML = '';
+      let total = 0;
+
+      const filtered = selectedMonth 
+        ? debts.filter(item => item.date && item.date.startsWith(selectedMonth))
+        : debts;
+
+      filtered.forEach(item => {
+        total += Number(item.amount);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.date}</td>
+          <td><strong>${item.debtor_name}</strong></td>
+          <td>${Number(item.amount).toLocaleString()} RWF</td>
+          <td><span class="status-badge ${item.status === 'Paid' ? 'status-ok' : 'status-emergency'}">${item.status}</span></td>
+          <td>${item.user_name || '-'}</td>
+          <td>${item.notes || '-'}</td>
+          <td class="actions-column">
+            <button class="btn-action btn-edit" onclick="editDebt(${item.id})">Edit</button>
+            <button class="btn-action btn-delete" onclick="deleteDebt(${item.id})">Delete</button>
+          </td>
+        `;
+        listEl.appendChild(row);
+
+        const card = document.createElement('div');
+        card.className = 'mobile-card';
+        card.innerHTML = `
+          <div class="mobile-card-row"><span>Date</span><strong>${item.date}</strong></div>
+          <div class="mobile-card-row"><span>Debtor</span><strong>${item.debtor_name}</strong></div>
+          <div class="mobile-card-row"><span>Amount</span><strong>${Number(item.amount).toLocaleString()} RWF</strong></div>
+          <div class="mobile-card-row"><span>Status</span><span class="status-badge ${item.status === 'Paid' ? 'status-ok' : 'status-emergency'}">${item.status}</span></div>
+          <div class="mobile-card-row"><span>Added By</span><strong>${item.user_name || '-'}</strong></div>
+          <div class="mobile-card-row"><span>Notes</span><strong>${item.notes || '-'}</strong></div>
+          <div class="mobile-actions">
+            <button class="btn-action btn-edit" onclick="editDebt(${item.id})">Edit</button>
+            <button class="btn-action btn-delete" onclick="deleteDebt(${item.id})">Delete</button>
+          </div>
+        `;
+        mobileEl.appendChild(card);
+      });
+      document.getElementById('debt-total-amount').textContent = `${total.toLocaleString()} RWF`;
+    }
+
+    function renderOrders() {
+      const selectedMonth = monthFilterPo.value;
+      const listEl = document.getElementById('po-list');
+      const mobileEl = document.getElementById('po-mobile-cards');
+      listEl.innerHTML = ''; mobileEl.innerHTML = '';
+      let total = 0;
+
+      const filtered = selectedMonth 
+        ? orders.filter(item => item.date && item.date.startsWith(selectedMonth))
+        : orders;
+
+      filtered.forEach(item => {
+        total += Number(item.amount);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.date}</td>
+          <td><strong>${item.invoice_number}</strong></td>
+          <td>${item.supplier_name}</td>
+          <td>${Number(item.amount).toLocaleString()} RWF</td>
+          <td>${item.user_name || '-'}</td>
+          <td class="actions-column">
+            <button class="btn-action btn-edit" onclick="editOrder(${item.id})">Edit</button>
+            <button class="btn-action btn-delete" onclick="deleteOrder(${item.id})">Delete</button>
+          </td>
+        `;
+        listEl.appendChild(row);
+
+        const card = document.createElement('div');
+        card.className = 'mobile-card';
+        card.innerHTML = `
+          <div class="mobile-card-row"><span>Date</span><strong>${item.date}</strong></div>
+          <div class="mobile-card-row"><span>Invoice</span><strong>${item.invoice_number}</strong></div>
+          <div class="mobile-card-row"><span>Supplier</span><strong>${item.supplier_name}</strong></div>
+          <div class="mobile-card-row"><span>Amount</span><strong>${Number(item.amount).toLocaleString()} RWF</strong></div>
+          <div class="mobile-card-row"><span>Added By</span><strong>${item.user_name || '-'}</strong></div>
+          <div class="mobile-actions">
+            <button class="btn-action btn-edit" onclick="editOrder(${item.id})">Edit</button>
+            <button class="btn-action btn-delete" onclick="deleteOrder(${item.id})">Delete</button>
+          </div>
+        `;
+        mobileEl.appendChild(card);
+      });
+      document.getElementById('po-total-amount').textContent = `${total.toLocaleString()} RWF`;
+    }
+
+    // 6. REPORTS EXPORT & PRINT
     document.getElementById('print-btn').addEventListener('click', () => {
-      const activeMonth = activeTab === 'expenses' ? monthFilterExp.value : monthFilterInc.value;
-      const filterLabel = activeMonth ? `Month: ${activeMonth}` : 'All Months (Full History)';
-      const title = activeTab === 'expenses' ? 'Pharmacy Expense Report' : 'Daily Income & Register Report';
-      document.getElementById('print-page-title').textContent = `${title} (${filterLabel})`;
+      document.getElementById('print-page-title').textContent = `System Report (${activeTab.toUpperCase()})`;
       document.getElementById('print-current-date').textContent = new Date().toLocaleDateString();
       window.print();
     });
 
+    document.getElementById('export-pdf-btn').addEventListener('click', () => {
+      const element = document.getElementById('printable-area');
+      const opt = {
+        margin:       0.3,
+        filename:     `Pharma_Report_${activeTab}_${todayStr}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
+      };
+      html2pdf().set(opt).from(element).save();
+    });
+
     document.getElementById('export-btn').addEventListener('click', () => {
       if (activeTab === 'expenses') exportExpensesCSV();
-      else exportIncomeCSV();
+      else if (activeTab === 'income') exportIncomeCSV();
+      else if (activeTab === 'debts') exportDebtsCSV();
+      else if (activeTab === 'orders') exportOrdersCSV();
+      else alert("Select a specific tab to export CSV data.");
     });
 
     function exportExpensesCSV() {
-      const selectedMonth = monthFilterExp.value;
-      const filtered = selectedMonth 
-        ? expenses.filter(item => item.date && item.date.startsWith(selectedMonth))
-        : expenses;
-
-      if (!filtered.length) return alert("No expenses to export.");
-
       let csv = "data:text/csv;charset=utf-8,Date,Added By,Category,Description,Amount (RWF)\n";
-      filtered.forEach(item => {
-        csv += `${item.date},${item.user || item.user_name},${item.category},"${item.description}",${item.amount}\n`;
-      });
-      downloadFile(csv, `Expenses_${selectedMonth || 'All_Time'}.csv`);
+      expenses.forEach(item => csv += `${item.date},${item.user_name || item.user},${item.category},"${item.description}",${item.amount}\n`);
+      downloadFile(csv, `Expenses_${todayStr}.csv`);
     }
 
     function exportIncomeCSV() {
-      const selectedMonth = monthFilterInc.value;
-      const filtered = selectedMonth 
-        ? incomeRecords.filter(item => item.date && item.date.startsWith(selectedMonth))
-        : incomeRecords;
+      let csv = "data:text/csv;charset=utf-8,Date,Added By,Cash (RWF),MoMoPay (RWF),Gross Income (RWF),Bank Name,Banked (RWF)\n";
+      incomeRecords.forEach(item => csv += `${item.date},${item.user_name || item.user},${item.cash_amount||0},${item.momo_amount||0},${item.gross_income||0},${item.bank_name},${item.bank_amount||0}\n`);
+      downloadFile(csv, `Daily_Income_${todayStr}.csv`);
+    }
 
-      if (!filtered.length) return alert("No income records to export.");
+    function exportDebtsCSV() {
+      let csv = "data:text/csv;charset=utf-8,Date,Debtor Name,Amount (RWF),Status,Added By,Notes\n";
+      debts.forEach(item => csv += `${item.date},"${item.debtor_name}",${item.amount},${item.status},${item.user_name||''},"${item.notes||''}"\n`);
+      downloadFile(csv, `Debts_${todayStr}.csv`);
+    }
 
-      let csv = "data:text/csv;charset=utf-8,Date,Added By,Cash (RWF),MoMoPay (RWF),Gross Income (RWF),Expenses (RWF),Bank Name,Banked (RWF),Banked Status,Notes\n";
-      filtered.forEach(item => {
-        const cashAmt = item.cash_amount || 0;
-        const momoAmt = item.momo_amount || 0;
-        const grossAmt = item.gross_income || (cashAmt + momoAmt);
-        const sameDayExp = expenses.filter(e => e.date === item.date).reduce((sum, e) => sum + Number(e.amount||0), 0);
-        const statusStr = item.is_transferred_to_bank !== false ? 'Transferred' : 'Held Emergency';
-        csv += `${item.date},${item.user_name || item.user},${cashAmt},${momoAmt},${grossAmt},${sameDayExp},${item.bank_name},${item.bank_amount},${statusStr},"${item.notes||''}"\n`;
-      });
-      downloadFile(csv, `Daily_Income_${selectedMonth || 'All_Time'}.csv`);
+    function exportOrdersCSV() {
+      let csv = "data:text/csv;charset=utf-8,Date,Invoice Number,Supplier Name,Amount (RWF),Added By\n";
+      orders.forEach(item => csv += `${item.date},"${item.invoice_number}","${item.supplier_name}",${item.amount},${item.user_name||''}\n`);
+      downloadFile(csv, `Purchase_Orders_${todayStr}.csv`);
     }
 
     function downloadFile(content, filename) {
